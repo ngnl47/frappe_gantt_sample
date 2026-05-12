@@ -1,0 +1,120 @@
+<h2>设计第五部分：甘特图适配器与预设数据</h2>
+<p class="subtitle">数据转换逻辑与初始示例数据</p>
+
+<div class="mockup">
+  <div class="mockup-header">甘特图适配器逻辑</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+function toGanttTasks(mappings: ServerMapping[]): GanttTask[] {
+  // 1. 按服务器 ID 分组
+  const grouped = groupBy(mappings, 'k');
+
+  // 2. 每个服务器生成任务块
+  const tasks: GanttTask[] = [];
+
+  for (const [serverId, items] of grouped) {
+    // 每个服务器一行，任务块按时间排序
+    items.sort((a, b) => a.st - b.st);
+
+    for (const item of items) {
+      const task: GanttTask = {
+        id: `${serverId}_${item.st}_${item.et ?? 'ongoing'}`,
+        name: `服务器 ${serverId}`,
+        start: dayjs(item.st).toISOString(),
+        end: item.et
+          ? dayjs(item.et).toISOString()
+          : dayjs().add(30, 'day').toISOString(), // 持续任务延伸显示
+        progress: 0,
+        dependencies: item.v && item.type === 1
+          ? `${item.v}_${item.st}_${item.et ?? 'ongoing'}`
+          : '',
+        custom_class: item.type === 1 ? 'task-mapping' : 'task-paused',
+        _serverId: serverId,
+        _mappingId: item.id,
+      };
+      tasks.push(task);
+    }
+  }
+
+  return tasks;
+}
+    </pre>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">预设数据示例（简单场景）</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+// 服务器列表：[1, 2, 3, 4]
+// 时间基准：2024-01-01 00:00:00 (timestamp: 1704067200000)
+
+const presetData: ServerMapping[] = [
+  // 服务器1：第1周映射到服务器2，第2周暂停
+  { id: 1, k: 1, v: 2, cmt: '服务器1→服务器2', ct: Date.now(),
+    st: 1704067200000, et: 1704672000000, type: 1 },
+  { id: 2, k: 1, v: null, cmt: '服务器1暂停期', ct: Date.now(),
+    st: 1704672000000, et: 1705276800000, type: 2 },
+
+  // 服务器2：第1周被服务器1指向，第2周映射到服务器3
+  { id: 3, k: 2, v: null, cmt: '服务器2被指向', ct: Date.now(),
+    st: 1704067200000, et: 1704672000000, type: 1 },
+  { id: 4, k: 2, v: 3, cmt: '服务器2→服务器3', ct: Date.now(),
+    st: 1704672000000, et: null, type: 1 }, // ← 持续进行中
+
+  // 服务器3：全程暂停
+  { id: 5, k: 3, v: null, cmt: '服务器3暂停', ct: Date.now(),
+    st: 1704067200000, et: null, type: 2 },
+
+  // 服务器4：独立运行（k=v）
+  { id: 6, k: 4, v: 4, cmt: '服务器4独立', ct: Date.now(),
+    st: 1704067200000, et: null, type: 1 },
+];
+    </pre>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">甘特图视图效果示意</div>
+  <div class="mockup-body">
+    <div style="font-size:12px;">
+      <div style="margin-bottom:8px;color:#666;">时间轴: 2024-01-01 ──────────────────→ 2024-01-15</div>
+
+      <div style="display:flex;align-items:center;margin-bottom:4px;">
+        <span style="width:80px;font-weight:bold;">服务器1:</span>
+        <span style="background:#4CAF50;color:white;padding:2px 12px;border-radius:2px;">映射→2</span>
+        <span style="background:#9E9E9E;color:white;padding:2px 12px;border-radius:2px;">暂停</span>
+      </div>
+
+      <div style="display:flex;align-items:center;margin-bottom:4px;">
+        <span style="width:80px;font-weight:bold;">服务器2:</span>
+        <span style="background:#2196F3;color:white;padding:2px 12px;border-radius:2px;">被指向</span>
+        <span style="background:#4CAF50;color:white;padding:2px 12px;border-radius:2px;">映射→3</span>
+        <span style="color:#FF5722;">──→</span>
+      </div>
+
+      <div style="display:flex;align-items:center;margin-bottom:4px;">
+        <span style="width:80px;font-weight:bold;">服务器3:</span>
+        <span style="background:#9E9E9E;color:white;padding:2px 24px;border-radius:2px;">暂停</span>
+        <span style="color:#FF5722;">──→</span>
+      </div>
+
+      <div style="display:flex;align-items:center;">
+        <span style="width:80px;font-weight:bold;">服务器4:</span>
+        <span style="background:#673AB7;color:white;padding:2px 16px;border-radius:2px;">独立</span>
+        <span style="color:#FF5722;">──→</span>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding:8px;background:#f5f5f5;border-radius:4px;font-size:12px;">
+      <strong>图例说明：</strong><br>
+      <span style="display:inline-block;width:12px;height:12px;background:#4CAF50;border-radius:2px;margin-right:4px;"></span> 映射任务块（type=1）<br>
+      <span style="display:inline-block;width:12px;height:12px;background:#9E9E9E;border-radius:2px;margin-right:4px;"></span> 暂停任务块（type=2）<br>
+      <span style="color:#FF5722;font-weight:bold;">──→</span> 持续进行中（et=null）<br>
+      箭头连线 = 依赖关系（指向）
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:16px;"><strong>这是最后一部分设计，整体设计是否完整？</strong></p>
+<p>请确认后我将编写设计文档（保存到 docs/superpowers/specs/）。</p>

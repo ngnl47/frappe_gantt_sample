@@ -1,0 +1,33 @@
+<h2>甘特图交互需求</h2>
+<p class="subtitle">除了展示服务器指向关系外，甘特图还需要哪些交互功能？</p>
+
+<div class="options">
+  <div class="option" data-choice="display-only" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>仅展示</h3>
+      <p>只显示任务块和依赖箭头，不需要交互</p>
+    </div>
+  </div>
+  <div class="option" data-choice="basic" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>基础交互</h3>
+      <p>点击任务块显示详情，拖拽调整时间范围（缩放、平移）</p>
+    </div>
+  </div>
+  <div class="option" data-choice="full" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>完整交互</h3>
+      <p>基础交互 + 拖拽创建新任务 + 拖拽调整依赖关系</p>
+    </div>
+  </div>
+  <div class="option" data-choice="custom" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>自定义</h3>
+      <p>请在终端说明具体需求</p>
+    </div>
+  </div>
+</div>

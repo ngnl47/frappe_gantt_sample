@@ -1,0 +1,49 @@
+<h2>方案对比：甘特图数据映射与页面布局</h2>
+<p class="subtitle">基于 Frappe Gantt 的特性，有几种不同的实现思路：</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">方案 A：甘特图为主 + 底部表格</div>
+    <div class="mockup-body">
+      <div class="mock-nav" style="background:#e8f4fd;padding:8px;">操作栏（新增、时间范围筛选）</div>
+      <div style="background:#f0f0f0;padding:40px 8px;text-align:center;border:1px solid #ddd;">甘特图（主体区域）</div>
+      <div style="background:#fafafa;padding:16px 8px;border:1px solid #ddd;">底部数据列表表格（可选）</div>
+    </div>
+    <div class="pros-cons" style="margin-top:8px;">
+      <div class="pros"><h4>优点</h4><ul><li>甘特图核心展示直观</li><li>适合单一功能 demo</li></ul></div>
+      <div class="cons"><h4>缺点</h4><ul><li>表格与甘特图分离</li></ul></div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">方案 B：左侧列表 + 右侧甘特图</div>
+    <div class="mockup-body">
+      <div style="display:flex;">
+        <div style="width:40%;background:#fafafa;padding:16px 8px;border:1px solid #ddd;">数据列表（可折叠）</div>
+        <div style="width:60%;background:#f0f0f0;padding:16px 8px;text-align:center;border:1px solid #ddd;">甘特图</div>
+      </div>
+    </div>
+    <div class="pros-cons" style="margin-top:8px;">
+      <div class="pros"><h4>优点</h4><ul><li>数据与甘特图同步显示</li></ul></div>
+      <div class="cons"><h4>缺点</h4><ul><li>布局复杂</li><li>甘特图区域受限</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;border:2px solid #4CAF50;">
+  <div class="mockup-header" style="background:#4CAF50;color:white;">方案 C：甘特图单页面 + 弹窗（推荐）</div>
+  <div class="mockup-body">
+    <div class="mock-nav" style="background:#e8f4fd;padding:8px;">[新增] [时间范围筛选] [重置]</div>
+    <div style="background:#f0f0f0;padding:60px 8px;text-align:center;border:1px solid #ddd;">
+      甘特图（全屏展示）
+      <br><br>
+      <span style="color:#666;">点击任务块 → 弹窗显示详情 + 编辑</span>
+    </div>
+  </div>
+  <div class="pros-cons" style="margin-top:8px;">
+    <div class="pros"><h4>优点</h4><ul><li>最简洁，甘特图最大化</li><li>符合 demo 简化需求</li><li>移植后可扩展</li></ul></div>
+    <div class="cons"><h4>缺点</h4><ul><li>缺少表格视图</li></ul></div>
+  </div>
+</div>
+
+<p style="margin-top:16px;"><strong>推荐：方案 C</strong> — Demo 目的是验证可行性，甘特图最大化可视区域，弹窗编辑满足单条增删改查。</p>

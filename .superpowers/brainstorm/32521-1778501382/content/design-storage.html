@@ -1,0 +1,110 @@
+<h2>设计第四部分：IndexedDB 存储设计</h2>
+<p class="subtitle">数据库结构与 CRUD 操作接口</p>
+
+<div class="mockup">
+  <div class="mockup-header">数据库配置</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+// IndexedDB 配置
+const DB_NAME = 'gantt_demo';
+const DB_VERSION = 1;
+
+// 存储表
+const STORES = {
+  mappings: 'server_mappings'  // 服务器映射数据
+};
+
+// 索引设计（便于高效查询）
+const INDEXES = [
+  { name: 'by_k', keyPath: 'k' },         // 按源服务器查询
+  { name: 'by_v', keyPath: 'v' },         // 按目标服务器查询
+  { name: 'by_st', keyPath: 'st' },       // 按开始时间查询
+  { name: 'by_et', keyPath: 'et' },       // 按结束时间查询
+  { name: 'by_type', keyPath: 'type' },   // 按类型查询
+];
+    </pre>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">数据类型（更新：et 可为 null）</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+export interface ServerMapping {
+  id: number;
+  k: number;
+  v: number | null;
+  cmt: string;
+  ct: number;
+  st: number;
+  et: number | null;  // ← 更新：null 表示持续进行中
+  type: DataType;
+}
+    </pre>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">CRUD 操作接口</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+interface DataService {
+  // 单条操作
+  create(data: Partial<ServerMapping>): Promise<ServerMapping>;
+  update(id: number, data: Partial<ServerMapping>): Promise<ServerMapping>;
+  delete(id: number): Promise<void>;
+  getById(id: number): Promise<ServerMapping | null>;
+
+  // 批量操作
+  getAll(): Promise<ServerMapping[]>;
+  queryByTimeRange(start: number, end: number): Promise<ServerMapping[]>;
+  queryByServer(serverId: number): Promise<ServerMapping[]>;
+
+  // 校验辅助（新增补充）
+  checkOverlap(serverId: number, st: number, et: number | null): Promise<boolean>;
+  getUnfinishedTask(serverId: number): Promise<ServerMapping | null>;
+
+  // 初始化
+  initWithPresetData(): Promise<void>;
+  clearAll(): Promise<void>;
+}
+    </pre>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">批量查询逻辑（时间范围交集）</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+// [st, et] 与 [t1, t2] 有交集的条件：
+// - et 为 null（持续进行）：只要 st < t2 就有交集
+// - et 有值：st < t2 && et > t1
+
+function queryByTimeRange(t1: number, t2: number): Promise<ServerMapping[]> {
+  return getAll().filter(item =>
+    item.st < t2 && (item.et === null || item.et > t1)
+  );
+}
+    </pre>
+  </div>
+</div>
+
+<div style="margin-top:16px;padding:12px;background:#fff3e0;border-radius:4px;">
+  <strong>新增逻辑（自动补充 et）：</strong>
+  <pre style="background:#fff;padding:8px;margin-top:8px;font-size:12px;">
+async function create(data: Partial<ServerMapping>) {
+  // 1. 检查是否有未结束的任务块（et === null）
+  const unfinished = await getUnfinishedTask(data.k);
+
+  // 2. 如果有，设置其 et 为新任务块的 st
+  if (unfinished) {
+    await update(unfinished.id, { et: data.st });
+  }
+
+  // 3. 创建新任务块
+  return db.add('mappings', data);
+}
+  </pre>
+</div>
+
+<p style="margin-top:16px;">这部分存储设计是否满足需求？请在终端回复。</p>

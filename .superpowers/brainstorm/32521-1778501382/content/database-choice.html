@@ -1,0 +1,33 @@
+<h2>本地数据库选择</h2>
+<p class="subtitle">你提到使用"简单的本地数据库"，请问你倾向于哪种方案？</p>
+
+<div class="options">
+  <div class="option" data-choice="indexeddb" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>IndexedDB</h3>
+      <p>浏览器原生，无需后端，数据持久化在浏览器中，支持大数据量</p>
+    </div>
+  </div>
+  <div class="option" data-choice="localstorage" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>LocalStorage + JSON</h3>
+      <p>最简单，但数据量有限制（~5MB），适合 demo 演示</p>
+    </div>
+  </div>
+  <div class="option" data-choice="sqlite" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>SQLite (sql.js)</h3>
+      <p>完整 SQL 功能，数据存储在内存/文件，需要额外依赖</p>
+    </div>
+  </div>
+  <div class="option" data-choice="json-file" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>模拟后端 (JSON 文件)</h3>
+      <p>用静态 JSON 文件模拟后端 API，无真正数据库，最轻量</p>
+    </div>
+  </div>
+</div>

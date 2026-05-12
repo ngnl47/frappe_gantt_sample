@@ -1,0 +1,96 @@
+<h2>设计第二部分：数据结构设计</h2>
+<p class="subtitle">业务数据与甘特图数据的转换</p>
+
+<div class="mockup">
+  <div class="mockup-header">业务数据类型（TypeScript）</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+// 数据类型枚举
+export enum DataType {
+  MAPPING = 1,    // 服务器映射指向关系
+  PAUSED = 2      // 服务器暂停期，无指向
+}
+
+// 单条记录数据结构（与你提供的 JSON 对应）
+export interface ServerMapping {
+  id: number;         // 记录唯一 ID，全局自增
+  k: number;          // 源服务器 ID
+  v: number | null;   // 目标服务器 ID，null=暂停期
+  cmt: string;        // 备注
+  ct: number;         // 创建时间（毫秒时间戳）
+  st: number;         // 开始时间（毫秒时间戳）
+  et: number;         // 结束时间（毫秒时间戳）
+  type: DataType;     // 数据类型
+}
+    </pre>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">甘特图任务块类型</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+// Frappe Gantt 任务块格式
+export interface GanttTask {
+  id: string;         // 格式：`${k}_${st}_${et}`
+  name: string;       // 显示名称：服务器 ID
+  start: string;      // ISO 格式时间
+  end: string;        // ISO 格式时间
+  progress: number;   // 默认 0（暂不使用）
+  dependencies: string; // 依赖的任务块 ID
+  custom_class?: string; // CSS 类：task-mapping/task-paused
+  _serverId: number;  // 扩展：服务器 ID
+  _mappingId: number; // 扩展：业务数据 ID
+}
+    </pre>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">数据转换规则</div>
+  <div class="mockup-body">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr style="background:#f5f5f5;">
+        <th style="padding:8px;border:1px solid #ddd;text-align:left;">业务字段</th>
+        <th style="padding:8px;border:1px solid #ddd;text-align:left;">甘特图字段</th>
+        <th style="padding:8px;border:1px solid #ddd;text-align:left;">转换规则</th>
+      </tr>
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;">k</td>
+        <td style="padding:8px;border:1px solid #ddd;">id 前缀</td>
+        <td style="padding:8px;border:1px solid #ddd;">任务块 ID = `${k}_${st}_${et}`</td>
+      </tr>
+      <tr style="background:#f5f5f5;">
+        <td style="padding:8px;border:1px solid #ddd;">k</td>
+        <td style="padding:8px;border:1px solid #ddd;">name</td>
+        <td style="padding:8px;border:1px solid #ddd;">显示为服务器 ID</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;">st/et</td>
+        <td style="padding:8px;border:1px solid #ddd;">start/end</td>
+        <td style="padding:8px;border:1px solid #ddd;">dayjs 转为 ISO 格式</td>
+      </tr>
+      <tr style="background:#f5f5f5;">
+        <td style="padding:8px;border:1px solid #ddd;">v</td>
+        <td style="padding:8px;border:1px solid #ddd;">dependencies</td>
+        <td style="padding:8px;border:1px solid #ddd;">type=1 且 v≠null 时，依赖 = `${v}_${st}_${et}`</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;">type</td>
+        <td style="padding:8px;border:1px solid #ddd;">custom_class</td>
+        <td style="padding:8px;border:1px solid #ddd;">1 → 'task-mapping'，2 → 'task-paused'</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div style="margin-top:16px;padding:12px;background:#fff3e0;border-radius:4px;">
+  <strong>关键约束校验：</strong>
+  <ul style="margin:8px 0 0 0;padding-left:20px;">
+    <li>相同服务器的时间段不能重叠（[st, et] 不能交叉）</li>
+    <li>有指向关系的两个任务块，st 与 et 必须一致</li>
+    <li>被指向的任务块必须先存在（录入时校验）</li>
+  </ul>
+</div>
+
+<p style="margin-top:16px;">这部分数据结构设计是否清晰？请在终端回复。</p>

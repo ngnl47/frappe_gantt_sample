@@ -1,0 +1,54 @@
+<h2>设计第一部分：项目架构</h2>
+<p class="subtitle">目录结构与模块划分</p>
+
+<div class="mockup">
+  <div class="mockup-header">项目目录结构</div>
+  <div class="mockup-body">
+    <pre style="background:#2d3748;color:#e2e8f0;padding:16px;font-size:12px;overflow-x:auto;">
+frappe_gantt_sample/
+├── src/
+│   ├── main.ts                 # 入口文件
+│   ├── App.vue                 # 根组件
+│   ├── assets/
+│   │   └── styles/
+│   │       └── main.scss       # 全局样式
+│   ├── components/
+│   │   ├── GanttChart.vue      # 甘特图组件（封装 Frappe Gantt）
+│   │   ├── TaskModal.vue       # 任务详情/编辑弹窗
+│   │   └── Toolbar.vue         # 顶部工具栏
+│   ├── services/
+│   │   ├── database.ts         # IndexedDB 操作封装
+│   │   ├── dataService.ts      # 数据 CRUD 业务逻辑
+│   │   └── ganttAdapter.ts     # 甘特图数据适配器
+│   ├── stores/
+│   │   └── ganttStore.ts       # Pinia 状态管理
+│   ├── types/
+│   │   └── index.ts            # TypeScript 类型定义
+│   ├── data/
+│   │   └── presetData.ts       # 预设示例数据
+│   ├── utils/
+│   │   └── timeUtils.ts        # 时间处理工具
+│   └── views/
+│   │   └── GanttView.vue       # 主页面视图
+│   └── router/
+│       └── index.ts            # 路由配置（可选，单页面可简化）
+├── public/
+├── index.html
+├── package.json
+├── vite.config.ts
+├── tailwind.config.js
+└── tsconfig.json
+    </pre>
+  </div>
+</div>
+
+<div style="margin-top:16px;padding:12px;background:#e8f5e9;border-radius:4px;">
+  <strong>架构特点：</strong>
+  <ul style="margin:8px 0 0 0;padding-left:20px;">
+    <li>单页面应用，路由简化（可不用 Vue Router）</li>
+    <li>数据层与服务层分离，便于移植到 evo-manager</li>
+    <li>Frappe Gantt 通过适配器转换为业务数据格式</li>
+  </ul>
+</div>
+
+<p style="margin-top:16px;">这部分架构设计是否符合你的预期？请在终端回复。</p>

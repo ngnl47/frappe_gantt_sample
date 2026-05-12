@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Frappe Gantt 任务块样式（custom_class 设置在 bar-wrapper 上，bar 是实际的矩形）
+.gantt .bar-wrapper.task-mapping .bar {
+  fill: #4CAF50 !important;
+  stroke: #388E3C !important;
+}
+
+.gantt .bar-wrapper.task-paused .bar {
+  fill: #F44336 !important;
+  stroke: #D32F2F !important;
+}
+
+// 当前日期高亮（橙色）
+.gantt .today-highlight {
+  fill: rgba(255, 152, 0, 0.3) !important;
+}
+
+// 锚点任务（透明，用于控制时间轴起点）
+.gantt .bar-wrapper.task-anchor .bar {
+  fill: transparent !important;
+  stroke: transparent !important;
+}
+
+.gantt .bar-wrapper.task-anchor {
+  opacity: 0 !important;
+}
+
+// 禁用任务块拖拽调整滑块（防止误改数据）
+.gantt .handle-group {
+  display: none !important;
+}
+
+// 依赖箭头样式
+.gantt .arrow {
+  stroke: #2196F3 !important;
+  stroke-width: 2px !important;
+}
+
+// 增强月初刻度线（月份边界）
+.gantt .tick.thick {
+  stroke: #333 !important;
+  stroke-width: 1.5 !important;
+}
+
+// 表头文字样式
+.gantt .grid-header text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+// 月份文字（upper）更醒目
+.gantt text[class*="upper"] {
+  fill: #1a1a1a !important;
+  font-weight: 600 !important;
+}

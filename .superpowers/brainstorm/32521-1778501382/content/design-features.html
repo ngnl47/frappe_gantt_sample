@@ -1,0 +1,108 @@
+<h2>设计第三部分：功能流程与交互设计</h2>
+<p class="subtitle">页面布局与核心功能流程</p>
+
+<div class="mockup">
+  <div class="mockup-header">页面布局</div>
+  <div class="mockup-body">
+    <div class="mock-nav" style="background:#e3f2fd;padding:8px;display:flex;gap:8px;">
+      <button class="mock-button">新增任务</button>
+      <span style="margin-left:16px;">时间范围:</span>
+      <input class="mock-input" style="width:120px;" placeholder="开始日期">
+      <span>~</span>
+      <input class="mock-input" style="width:120px;" placeholder="结束日期">
+      <button class="mock-button">筛选</button>
+      <button class="mock-button">重置</button>
+    </div>
+    <div style="background:#f5f5f5;padding:16px;border:1px solid #ddd;">
+      <div style="background:#fff;padding:12px;border:1px solid #ccc;margin-bottom:8px;">
+        <span style="width:80px;display:inline-block;font-weight:bold;">服务器1</span>
+        <span style="background:#4CAF50;color:white;padding:4px 24px;border-radius:4px;">映射期</span>
+      </div>
+      <div style="background:#fff;padding:12px;border:1px solid #ccc;margin-bottom:8px;">
+        <span style="width:80px;display:inline-block;font-weight:bold;">服务器2</span>
+        <span style="background:#4CAF50;color:white;padding:4px 12px;border-radius:4px;">任务A</span>
+        <span style="color:#666;">──→</span>
+        <span style="background:#2196F3;color:white;padding:4px 16px;border-radius:4px;">任务B</span>
+      </div>
+      <div style="background:#fff;padding:12px;border:1px solid #ccc;margin-bottom:8px;">
+        <span style="width:80px;display:inline-block;font-weight:bold;">服务器3</span>
+        <span style="background:#4CAF50;color:white;padding:4px 20px;border-radius:4px;">映射期</span>
+      </div>
+      <div style="background:#fff;padding:12px;border:1px solid #ccc;">
+        <span style="width:80px;display:inline-block;font-weight:bold;">服务器4</span>
+        <span style="background:#9E9E9E;color:white;padding:4px 24px;border-radius:4px;">暂停期</span>
+      </div>
+    </div>
+    <div style="margin-top:8px;color:#666;font-size:12px;">
+      点击任务块 → 弹出详情/编辑弹窗
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">核心功能流程</div>
+  <div class="mockup-body">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr style="background:#f5f5f5;">
+        <th style="padding:8px;border:1px solid #ddd;text-align:left;">功能</th>
+        <th style="padding:8px;border:1px solid #ddd;text-align:left;">操作流程</th>
+        <th style="padding:8px;border:1px solid #ddd;text-align:left;">弹窗内容</th>
+      </tr>
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;"><strong>新增任务</strong></td>
+        <td style="padding:8px;border:1px solid #ddd;">点击"新增任务"按钮</td>
+        <td style="padding:8px;border:1px solid #ddd;">选择服务器k、目标v、日期、备注、类型</td>
+      </tr>
+      <tr style="background:#f5f5f5;">
+        <td style="padding:8px;border:1px solid #ddd;"><strong>查看详情</strong></td>
+        <td style="padding:8px;border:1px solid #ddd;">点击甘特图任务块</td>
+        <td style="padding:8px;border:1px solid #ddd;">显示所有字段 + 编辑/删除按钮</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;"><strong>编辑任务</strong></td>
+        <td style="padding:8px;border:1px solid #ddd;">详情弹窗点击"编辑"</td>
+        <td style="padding:8px;border:1px solid #ddd;">可修改v、备注、类型；时间不可改</td>
+      </tr>
+      <tr style="background:#f5f5f5;">
+        <td style="padding:8px;border:1px solid #ddd;"><strong>删除任务</strong></td>
+        <td style="padding:8px;border:1px solid #ddd;">详情弹窗点击"删除"</td>
+        <td style="padding:8px;border:1px solid #ddd;">确认后删除，自动合并相邻任务</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;"><strong>批量筛选</strong></td>
+        <td style="padding:8px;border:1px solid #ddd;">选择时间范围 → 点击"筛选"</td>
+        <td style="padding:8px;border:1px solid #ddd;">显示有交集的所有任务块</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">TaskModal 状态流转</div>
+  <div class="mockup-body">
+    <div style="display:flex;align-items:center;gap:16px;justify-content:center;">
+      <div style="background:#e3f2fd;padding:12px;border-radius:4px;text-align:center;">详情模式</div>
+      <div style="color:#666;">──点击编辑──→</div>
+      <div style="background:#fff3e0;padding:12px;border-radius:4px;text-align:center;">编辑模式</div>
+      <div style="color:#666;">──保存──→</div>
+      <div style="background:#e3f2fd;padding:12px;border-radius:4px;text-align:center;">详情模式</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;justify-content:center;margin-top:8px;">
+      <div style="background:#ffebee;padding:12px;border-radius:4px;text-align:center;">点击删除</div>
+      <div style="color:#666;">──→</div>
+      <div style="background:#ffcdd2;padding:12px;border-radius:4px;text-align:center;">确认删除对话框</div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px;padding:12px;background:#e8f5e9;border-radius:4px;">
+  <strong>时间选择约束（新增补充）：</strong>
+  <ul style="margin:8px 0 0 0;padding-left:20px;">
+    <li>日期选择器（Element Plus DatePicker），只选日期</li>
+    <li>自动转换为当天 0 点时间戳</li>
+    <li>同一服务器任务块必须连续（前一个 et = 下一个 st）</li>
+    <li>新增时校验连续性和日期占用情况</li>
+  </ul>
+</div>
+
+<p style="margin-top:16px;">这部分功能流程设计是否满足需求？请在终端回复。</p>
