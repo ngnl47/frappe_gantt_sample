@@ -35,9 +35,9 @@ function handleOpenModal(mode: ModalMode) {
   modalVisible.value = true
 }
 
-// 处理任务块点击
+// 处理任务块点击（双击直接打开编辑面板）
 function handleTaskClick(task: ServerMapping) {
-  modalMode.value = ModalMode.VIEW
+  modalMode.value = ModalMode.EDIT
   selectedTask.value = task
   modalVisible.value = true
 }

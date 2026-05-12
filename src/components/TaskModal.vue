@@ -6,22 +6,8 @@
     :close-on-click-modal="false"
     @close="handleClose"
   >
-    <!-- 详情展示模式 -->
-    <div v-if="mode === ModalMode.VIEW && currentTask" class="detail-view">
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="ID">{{ currentTask.id }}</el-descriptions-item>
-        <el-descriptions-item label="服务器">{{ currentTask.k }}</el-descriptions-item>
-        <el-descriptions-item label="目标服务器">{{ currentTask.v ?? '无' }}</el-descriptions-item>
-        <el-descriptions-item label="开始时间">{{ formatTime(currentTask.st) }}</el-descriptions-item>
-        <el-descriptions-item label="结束时间">{{ currentTask.et ? formatTime(currentTask.et) : '持续进行中' }}</el-descriptions-item>
-        <el-descriptions-item label="类型">{{ currentTask.type === DataType.MAPPING ? '活动期' : '暂停期' }}</el-descriptions-item>
-        <el-descriptions-item label="备注">{{ currentTask.cmt || '无' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ formatTime(currentTask.ct) }}</el-descriptions-item>
-      </el-descriptions>
-    </div>
-
     <!-- 编辑/新增表单模式 -->
-    <el-form :model="formData" label-width="100px" v-if="mode !== ModalMode.VIEW">
+    <el-form :model="formData" label-width="100px">
       <el-form-item label="服务器 ID">
         <el-select
           v-model="formData.k"
@@ -61,7 +47,7 @@
           :disabled-minutes="disabledMinutes"
           :disabled-seconds="disabledSeconds"
         />
-        <div class="text-gray-400 text-xs mt-1">时间固定为 00:00:00</div>
+        <div class="text-gray-400 text-xs mt-1">(当天0点)</div>
       </el-form-item>
 
       <el-form-item label="结束日期">
@@ -84,7 +70,7 @@
             :disabled-minutes="disabledMinutes"
             :disabled-seconds="disabledSeconds"
           />
-          <span v-if="mappingEndType === 'fixed'" class="text-gray-500 text-xs">仅可选择：开始日期 + 14、28、42、56... 天（时间固定为 00:00:00）</span>
+          <span v-if="mappingEndType === 'fixed'" class="text-gray-500 text-xs">仅：开始日期+ 14、28、42... 天（当天0点）</span>
         </div>
         <!-- 暂停期：可选，留空表示持续 -->
         <div v-else>
@@ -99,7 +85,7 @@
             :disabled-minutes="disabledMinutes"
             :disabled-seconds="disabledSeconds"
           />
-          <div class="text-gray-400 text-xs mt-1">留空表示持续进行中（时间固定为 00:00:00）</div>
+          <div class="text-gray-400 text-xs mt-1">留空表示持续进行中（当天0点）</div>
         </div>
       </el-form-item>
 
@@ -118,13 +104,12 @@
     <!-- 操作按钮 -->
     <template #footer>
       <div class="flex justify-between">
-        <div v-if="mode === ModalMode.VIEW && currentTask">
+        <div v-if="currentTask">
           <el-button type="danger" @click="handleDelete">删除</el-button>
         </div>
         <div class="flex gap-2">
           <el-button @click="handleClose">取消</el-button>
-          <el-button v-if="mode === ModalMode.VIEW" type="primary" @click="switchToEdit">编辑</el-button>
-          <el-button v-if="mode !== ModalMode.VIEW" type="primary" @click="handleSave" :loading="saving">保存</el-button>
+          <el-button type="primary" @click="handleSave" :loading="saving">保存</el-button>
         </div>
       </div>
     </template>
@@ -144,7 +129,7 @@
 import { ref, computed, watch } from 'vue'
 import { useGanttStore } from '@/stores/ganttStore'
 import { ModalMode, DataType, ServerMapping } from '@/types'
-import { formatTimestamp, dateToZeroTimestamp } from '@/utils/timeUtils'
+import { dateToZeroTimestamp } from '@/utils/timeUtils'
 import { ElMessage } from 'element-plus'
 
 // 常量：14 天
@@ -270,13 +255,7 @@ watch([() => props.mode, () => props.task], () => {
   }
 }, { immediate: true })
 
-// 格式化时间
-function formatTime(timestamp: number): string {
-  return formatTimestamp(timestamp)
-}
-
 // 计算映射任务可选的结束日期（开始日期 + 14天*n）
-// 只允许这些日期，其他日期禁用
 function disabledEndDate(time: Date): boolean {
   // 仅对映射任务生效
   if (formData.value.type !== DataType.MAPPING || !formData.value.st) {
@@ -312,11 +291,6 @@ function disabledMinutes(): number[] {
 // 禁用所有非 0 的秒（只允许 00:00:00）
 function disabledSeconds(): number[] {
   return Array.from({ length: 59 }, (_, i) => i + 1) // 禁用 1-59
-}
-
-// 切换到编辑模式
-function switchToEdit() {
-  currentMode.value = ModalMode.EDIT
 }
 
 // 保存
@@ -450,7 +424,4 @@ function handleClose() {
 </script>
 
 <style scoped>
-.detail-view {
-  padding: 8px 0;
-}
 </style>
