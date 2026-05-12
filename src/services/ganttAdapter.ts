@@ -14,6 +14,7 @@ interface GanttOptions {
   padding?: number
   view_mode?: ViewMode
   date_format?: string
+  popup_trigger?: string | null
   custom_popup_html?: string | null
   language?: string
 }
@@ -207,6 +208,7 @@ export function getGanttOptions(): GanttOptions {
     padding: 18,
     view_mode: 'Day', // 每天一个刻度
     date_format: 'YYYY-MM-DD',
+    popup_trigger: null, // 禁用默认 popup，使用自定义 tooltip
     custom_popup_html: null,
     language: 'zh'
   }

@@ -12,6 +12,16 @@
     </div>
 
     <div ref="ganttRef" class="gantt-wrapper" v-show="!loading && realTaskCount > 0"></div>
+
+    <!-- 自定义 tooltip -->
+    <div
+      v-if="tooltipVisible"
+      class="custom-tooltip"
+      :style="{ left: tooltipX + 'px', top: tooltipY + 'px' }"
+    >
+      <div class="tooltip-title">{{ tooltipData.title }}</div>
+      <div class="tooltip-content">{{ tooltipData.content }}</div>
+    </div>
   </div>
 </template>
 
@@ -21,6 +31,7 @@ import { Loading } from '@element-plus/icons-vue'
 import { useGanttStore } from '@/stores/ganttStore'
 import { ServerMapping } from '@/types'
 import { getGanttOptions } from '@/services/ganttAdapter'
+import { formatTimestamp } from '@/utils/timeUtils'
 import Gantt from 'frappe-gantt'
 
 interface FrappeGanttTask {
@@ -46,9 +57,16 @@ void containerRef // 用于模板绑定，避免 TS unused warning
 const ganttRef = ref<HTMLDivElement | null>(null)
 const ganttInstance = ref<Gantt | null>(null)
 
+// Tooltip 状态
+const tooltipVisible = ref(false)
+const tooltipX = ref(0)
+const tooltipY = ref(0)
+const tooltipData = ref({ title: '', content: '' })
+
 // 计算属性
 const loading = computed(() => store.loading)
 const ganttTasks = computed(() => store.ganttTasks)
+const mappings = computed(() => store.mappings)
 
 // 实际任务数量（排除锚点任务）
 const realTaskCount = computed(() => ganttTasks.value.filter(t => t.id !== '__anchor__').length)
@@ -93,6 +111,12 @@ async function initGantt() {
     }
   })
 
+  // 禁用 Frappe Gantt 默认 popup（隐藏 popup_wrapper 元素）
+  const popupWrapper = ganttRef.value.querySelector('.popup-wrapper') as HTMLElement | null
+  if (popupWrapper) {
+    popupWrapper.style.display = 'none'
+  }
+
   // 覆盖 Frappe Gantt 的 padding 行为，使时间轴精确显示筛选范围
   const filterStart = store.timeRangeFilter?.start
   const filterEnd = store.timeRangeFilter?.end
@@ -122,6 +146,7 @@ async function initGantt() {
   adjustSameServerBarsToSameRow()
   addMonthBackgrounds()
   scrollToToday()
+  bindTooltipEvents()
 }
 
 // 将同一服务器（k 值相同）的任务块调整到同一行
@@ -395,7 +420,7 @@ function addMonthBackgrounds() {
   })
 }
 
-// 滚动到当前日期位置
+// 滚动到当前日期位置（偏左侧显示，展示更多未来任务）
 function scrollToToday() {
   if (!ganttRef.value || !ganttInstance.value) return
 
@@ -415,8 +440,9 @@ function scrollToToday() {
   const diffHours = (today.getTime() - ganttStart.getTime()) / (1000 * 60 * 60)
   const todayX = (diffHours / options.step) * options.column_width
 
-  // 滚动到今天位置（居中显示）
-  const scrollX = todayX - container.clientWidth / 2
+  // 滚动到今天位置（偏左侧显示，当前日期在左侧 25% 位置）
+  // 这样可以展示更多未来的任务块
+  const scrollX = todayX - container.clientWidth * 0.25
   container.scrollLeft = Math.max(0, scrollX)
 }
 
@@ -436,6 +462,70 @@ async function handleTaskClick(task: FrappeGanttTask) {
 watch(ganttTasks, () => {
   initGantt()
 }, { deep: true })
+
+// 绑定 tooltip 事件（监听 bar hover）
+function bindTooltipEvents() {
+  if (!ganttRef.value) return
+
+  const svg = ganttRef.value.querySelector('svg.gantt')
+  if (!svg) return
+
+  const barWrappers = svg.querySelectorAll('.bar-wrapper')
+
+  barWrappers.forEach(barWrapper => {
+    barWrapper.addEventListener('mouseenter', handleBarMouseEnter as EventListener)
+    barWrapper.addEventListener('mousemove', handleBarMouseMove as EventListener)
+    barWrapper.addEventListener('mouseleave', handleBarMouseLeave as EventListener)
+  })
+}
+
+// 处理 bar mouseenter
+function handleBarMouseEnter(e: MouseEvent) {
+  const target = e.currentTarget as SVGElement
+  const bar = target.querySelector('.bar')
+  if (!bar) return
+
+  // 获取任务 ID
+  const taskId = target.getAttribute('data-id')
+  if (!taskId || taskId === '__anchor__') return
+
+  // 从 ganttTasks 中找到对应任务
+  const task = ganttTasks.value.find(t => t.id === taskId)
+  if (!task) return
+
+  // 从 mappings 中获取完整数据
+  const mappingId = task._mappingId
+  const mapping = mappings.value.find(m => m.id === mappingId)
+  if (!mapping) return
+
+  // 设置 tooltip 内容
+  const startDate = formatTimestamp(mapping.st, 'YYYY-MM-DD HH:mm:ss')
+  const endDate = mapping.et ? formatTimestamp(mapping.et, 'YYYY-MM-DD HH:mm:ss') : '持续进行'
+  const createTime = formatTimestamp(mapping.ct, 'YYYY-MM-DD HH:mm:ss')
+  const taskType = mapping.type === 1 ? '活动期' : '暂停期'
+  const targetServer = mapping.v ? `${mapping.v}服` : '无'
+  const remark = mapping.cmt || '无'
+
+  tooltipData.value = {
+    title: `${mapping.k}服 (ID:${mapping.id})`,
+    content: `指向: ${targetServer}\n类型: ${taskType}\n时间: ${startDate} ~ ${endDate}\n备注: ${remark}\n创建时间: ${createTime}`
+  }
+  tooltipVisible.value = true
+}
+
+// 处理 bar mousemove（跟随鼠标）
+function handleBarMouseMove(e: MouseEvent) {
+  if (!containerRef.value) return
+
+  const containerRect = containerRef.value.getBoundingClientRect()
+  tooltipX.value = e.clientX - containerRect.left + 15
+  tooltipY.value = e.clientY - containerRect.top + 15
+}
+
+// 处理 bar mouseleave
+function handleBarMouseLeave() {
+  tooltipVisible.value = false
+}
 
 // 组件挂载
 onMounted(() => {
@@ -486,5 +576,29 @@ defineExpose({
 .gantt-wrapper {
   padding: 20px;
   min-height: 400px;
+}
+
+.custom-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  z-index: 100;
+  pointer-events: none;
+  white-space: pre-line;
+  max-width: 320px;
+}
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.tooltip-content {
+  font-size: 11px;
+  opacity: 0.9;
 }
 </style>

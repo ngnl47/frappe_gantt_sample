@@ -1,5 +1,5 @@
 import { ServerMapping, DataType } from '@/types'
-import { hasTimeIntersection, formatTimestamp } from '@/utils/timeUtils'
+import { hasTimeIntersection } from '@/utils/timeUtils'
 import {
   addMapping,
   updateMapping,

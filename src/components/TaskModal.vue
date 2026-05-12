@@ -14,7 +14,7 @@
         <el-descriptions-item label="目标服务器">{{ currentTask.v ?? '无' }}</el-descriptions-item>
         <el-descriptions-item label="开始时间">{{ formatTime(currentTask.st) }}</el-descriptions-item>
         <el-descriptions-item label="结束时间">{{ currentTask.et ? formatTime(currentTask.et) : '持续进行中' }}</el-descriptions-item>
-        <el-descriptions-item label="类型">{{ currentTask.type === DataType.MAPPING ? '映射指向' : '暂停期' }}</el-descriptions-item>
+        <el-descriptions-item label="类型">{{ currentTask.type === DataType.MAPPING ? '活动期' : '暂停期' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ currentTask.cmt || '无' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ formatTime(currentTask.ct) }}</el-descriptions-item>
       </el-descriptions>
@@ -23,16 +23,31 @@
     <!-- 编辑/新增表单模式 -->
     <el-form :model="formData" label-width="100px" v-if="mode !== ModalMode.VIEW">
       <el-form-item label="服务器 ID">
-        <el-select v-model="formData.k" placeholder="选择服务器" :disabled="mode === ModalMode.EDIT">
+        <el-select
+          v-model="formData.k"
+          placeholder="选择或输入服务器 ID"
+          :disabled="mode === ModalMode.EDIT"
+          filterable
+          allow-create
+          default-first-option
+        >
           <el-option v-for="id in serverIds" :key="id" :label="`服务器 ${id}`" :value="id" />
         </el-select>
+        <div class="text-gray-400 text-xs mt-1">可直接输入新的服务器 ID</div>
       </el-form-item>
 
       <el-form-item label="目标服务器" v-if="formData.type === DataType.MAPPING">
-        <el-select v-model="formData.v" placeholder="选择目标服务器" clearable>
+        <el-select
+          v-model="formData.v"
+          placeholder="选择或输入目标服务器"
+          clearable
+          filterable
+          allow-create
+          default-first-option
+        >
           <el-option v-for="id in serverIds" :key="id" :label="`服务器 ${id}`" :value="id" />
         </el-select>
-        <div class="text-gray-400 text-xs mt-1">留空表示无指向</div>
+        <div class="text-gray-400 text-xs mt-1">留空表示无指向，可直接输入新的服务器 ID</div>
       </el-form-item>
 
       <el-form-item label="开始日期">
@@ -90,7 +105,7 @@
 
       <el-form-item label="数据类型">
         <el-radio-group v-model="formData.type">
-          <el-radio :value="DataType.MAPPING">映射指向</el-radio>
+          <el-radio :value="DataType.MAPPING">活动期</el-radio>
           <el-radio :value="DataType.PAUSED">暂停期</el-radio>
         </el-radio-group>
       </el-form-item>
@@ -159,8 +174,8 @@ const mappingEndType = ref<'ongoing' | 'fixed'>('ongoing')
 
 // 表单数据
 const formData = ref({
-  k: 1,
-  v: null as number | null,
+  k: 1 as number | string,
+  v: null as number | string | null,
   st: null as number | null,
   et: null as number | null,
   type: DataType.MAPPING,
@@ -349,8 +364,8 @@ async function handleSave() {
       }
 
       await store.create({
-        k: formData.value.k,
-        v: formData.value.v,
+        k: Number(formData.value.k),
+        v: formData.value.v ? Number(formData.value.v) : null,
         st,
         et,
         type: formData.value.type,
@@ -386,7 +401,7 @@ async function handleSave() {
       }
 
       await store.update(currentTask.value.id, {
-        v: formData.value.v,
+        v: formData.value.v ? Number(formData.value.v) : null,
         type: formData.value.type,
         cmt: formData.value.cmt,
         st: editSt,
