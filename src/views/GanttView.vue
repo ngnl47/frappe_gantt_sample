@@ -1,7 +1,7 @@
 <template>
   <div class="gantt-view flex flex-col h-screen">
     <!-- 顶部工具栏 -->
-    <Toolbar @openModal="handleOpenModal" />
+    <Toolbar @openModal="handleOpenModal" @openTruncate="handleOpenTruncate" />
 
     <!-- 甘特图区域 -->
     <GanttChart @taskClick="handleTaskClick" />
@@ -13,6 +13,12 @@
       :task="selectedTask"
       @close="handleModalClose"
     />
+
+    <!-- 截断持续任务对话框 -->
+    <TruncateOngoingDialog
+      v-if="truncateVisible"
+      @close="handleTruncateClose"
+    />
   </div>
 </template>
 
@@ -21,12 +27,14 @@ import { ref } from 'vue'
 import Toolbar from '@/components/Toolbar.vue'
 import GanttChart from '@/components/GanttChart.vue'
 import TaskModal from '@/components/TaskModal.vue'
+import TruncateOngoingDialog from '@/components/TruncateOngoingDialog.vue'
 import { ModalMode, ServerMapping } from '@/types'
 
 // 弹窗状态
 const modalVisible = ref(false)
 const modalMode = ref<ModalMode>(ModalMode.VIEW)
 const selectedTask = ref<ServerMapping | null>(null)
+const truncateVisible = ref(false)
 
 // 打开弹窗
 function handleOpenModal(mode: ModalMode) {
@@ -46,6 +54,16 @@ function handleTaskClick(task: ServerMapping) {
 function handleModalClose() {
   modalVisible.value = false
   selectedTask.value = null
+}
+
+// 打开截断对话框
+function handleOpenTruncate() {
+  truncateVisible.value = true
+}
+
+// 关闭截断对话框
+function handleTruncateClose() {
+  truncateVisible.value = false
 }
 </script>
 

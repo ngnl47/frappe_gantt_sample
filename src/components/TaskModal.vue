@@ -273,8 +273,8 @@ function disabledEndDate(time: Date): boolean {
   // 检查是否为 14 天的倍数
   const diffDays = Math.round((checkTime - startTime) / (24 * 60 * 60 * 1000))
 
-  // 只允许 14、28、42、56... 天（最多显示到 140 天，即 10 个周期）
-  const allowedDays = [14, 28, 42, 56, 70, 84, 98, 112, 126, 140]
+  // 只允许 14、28、42、56... 天（最多显示到 54 个周期，约 1 年）
+  const allowedDays = Array.from({ length: 54 }, (_, i) => (i + 1) * 14)
   return !allowedDays.includes(diffDays)
 }
 

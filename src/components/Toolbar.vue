@@ -40,6 +40,11 @@
     <el-button type="warning" @click="handleInitPreset" class="ml-4">
       初始化预设数据
     </el-button>
+
+    <!-- 截断持续任务 -->
+    <el-button type="info" @click="handleTruncate" class="ml-2">
+      截断持续任务
+    </el-button>
   </div>
 </template>
 
@@ -53,6 +58,7 @@ import { ElMessage } from 'element-plus'
 
 const emit = defineEmits<{
   (e: 'openModal', mode: ModalMode): void
+  (e: 'openTruncate'): void
 }>()
 
 const store = useGanttStore()
@@ -118,6 +124,11 @@ async function handleInitPreset() {
   } catch (error: any) {
     ElMessage.error(error.message || '初始化失败')
   }
+}
+
+// 截断持续任务
+function handleTruncate() {
+  emit('openTruncate')
 }
 </script>
 
