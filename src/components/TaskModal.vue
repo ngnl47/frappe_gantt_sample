@@ -129,7 +129,7 @@
 import { ref, computed, watch } from 'vue'
 import { useGanttStore } from '@/stores/ganttStore'
 import { ModalMode, DataType, ServerMapping } from '@/types'
-import { dateToZeroTimestamp } from '@/utils/timeUtils'
+import { formatTimestamp, dateToZeroTimestamp } from '@/utils/timeUtils'
 import { ElMessage } from 'element-plus'
 
 // 常量：14 天
@@ -337,6 +337,18 @@ async function handleSave() {
         return
       }
 
+      // 检查时间重叠
+      const overlaps = store.checkTimeOverlap(Number(formData.value.k), st, et)
+      if (overlaps.length > 0) {
+        const overlapInfo = overlaps.map(o => {
+          const oStart = formatTimestamp(o.st, 'YYYY-MM-DD')
+          const oEnd = o.et ? formatTimestamp(o.et, 'YYYY-MM-DD') : '持续'
+          return `${oStart} ~ ${oEnd}`
+        }).join('、')
+        ElMessage.error(`时间与现有任务重叠：${overlapInfo}`)
+        return
+      }
+
       await store.create({
         k: Number(formData.value.k),
         v: formData.value.v ? Number(formData.value.v) : null,
@@ -372,6 +384,18 @@ async function handleSave() {
       } else {
         // 暂停期：可选结束时间
         editEt = formData.value.et ? dateToZeroTimestamp(formData.value.et) : null
+      }
+
+      // 检查时间重叠（排除自身）
+      const overlaps = store.checkTimeOverlap(currentTask.value.k, editSt, editEt, currentTask.value.id)
+      if (overlaps.length > 0) {
+        const overlapInfo = overlaps.map(o => {
+          const oStart = formatTimestamp(o.st, 'YYYY-MM-DD')
+          const oEnd = o.et ? formatTimestamp(o.et, 'YYYY-MM-DD') : '持续'
+          return `${oStart} ~ ${oEnd}`
+        }).join('、')
+        ElMessage.error(`时间与现有任务重叠：${overlapInfo}`)
+        return
       }
 
       await store.update(currentTask.value.id, {

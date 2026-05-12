@@ -133,6 +133,61 @@ export const useGanttStore = defineStore('gantt', () => {
     return dataService.getById(id)
   }
 
+  /**
+   * 检查时间重叠
+   * @param k 服务器 ID
+   * @param st 开始时间戳
+   * @param et 结束时间戳（null 表示持续）
+   * @param excludeId 排除的记录 ID（编辑时排除自身）
+   * @returns 重叠的记录列表，如果没有重叠返回空数组
+   */
+  function checkTimeOverlap(k: number, st: number, et: number | null, excludeId?: number): ServerMapping[] {
+    const overlaps: ServerMapping[] = []
+
+    for (const item of mappings.value) {
+      // 排除不同服务器
+      if (item.k !== k) continue
+      // 排除自身（编辑模式）
+      if (excludeId && item.id === excludeId) continue
+
+      // 检查时间重叠
+      // 左闭右开区间 [st, et)，重叠条件：两区间有交集
+      // 重叠：stA < etB && stB < etA
+      // 持续任务 et 为 null，表示无限延伸
+
+      const itemSt = item.st
+      const itemEt = item.et
+
+      if (et === null) {
+        // 新任务是持续任务
+        // 只要现有任务的开始时间 >= 新任务开始时间，就重叠
+        // 因为新任务从 st 开始无限延伸
+        if (itemSt >= st) {
+          overlaps.push(item)
+        }
+        // 或者现有任务也是持续任务，且开始时间 < 新任务开始时间
+        // 这时新任务在现有持续任务期间开始，也算重叠
+        if (itemEt === null && itemSt < st) {
+          overlaps.push(item)
+        }
+      } else if (itemEt === null) {
+        // 现有任务是持续任务
+        // 只要新任务的开始时间 >= 现有任务开始时间，就重叠
+        if (st >= itemSt) {
+          overlaps.push(item)
+        }
+      } else {
+        // 两个任务都有结束时间
+        // 重叠条件：st < itemEt && itemSt < et
+        if (st < itemEt && itemSt < et) {
+          overlaps.push(item)
+        }
+      }
+    }
+
+    return overlaps
+  }
+
   return {
     // 状态
     mappings,
@@ -151,6 +206,7 @@ export const useGanttStore = defineStore('gantt', () => {
     deleteMapping,
     setTimeRangeFilter,
     selectTask,
-    getById
+    getById,
+    checkTimeOverlap
   }
 })
