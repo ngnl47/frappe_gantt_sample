@@ -10,7 +10,11 @@
       "Bash(pkill -f \"vite\")",
       "Bash(curl -s http://localhost:5173/)",
       "Bash(grep -n '$bar\\\\|\\\\.bar' /Users/hcm-b0666/hortor/workspace_other/frappe_gantt_sample/node_modules/frappe-gantt/src/bar.js)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(./node_modules/.bin/rollup -c)",
+      "Bash(node *)",
+      "Bash(npm rebuild *)",
+      "Bash(npx terser *)"
     ]
   }
 }
