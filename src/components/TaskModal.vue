@@ -35,42 +35,56 @@
         <div class="text-gray-400 text-xs mt-1">留空表示无指向</div>
       </el-form-item>
 
-      <el-form-item label="开始日期" v-if="mode === ModalMode.CREATE">
+      <el-form-item label="开始日期">
         <el-date-picker
           v-model="formData.st"
-          type="date"
+          type="datetime"
           placeholder="选择开始日期"
-          format="YYYY-MM-DD"
+          format="YYYY-MM-DD HH:mm:ss"
           value-format="x"
+          :disabled-hours="disabledHours"
+          :disabled-minutes="disabledMinutes"
+          :disabled-seconds="disabledSeconds"
         />
+        <div class="text-gray-400 text-xs mt-1">时间固定为 00:00:00</div>
       </el-form-item>
 
-      <el-form-item label="结束日期" v-if="mode === ModalMode.CREATE">
-        <!-- 映射任务：可选持续进行或14天后结束 -->
+      <el-form-item label="结束日期">
+        <!-- 映射任务：可选持续进行或设置结束日期（必须是14天倍数） -->
         <div v-if="formData.type === DataType.MAPPING" class="flex flex-col gap-2">
           <el-radio-group v-model="mappingEndType" class="mb-2">
             <el-radio value="ongoing">持续进行</el-radio>
-            <el-radio value="fixed">14天后结束</el-radio>
+            <el-radio value="fixed">设置结束日期</el-radio>
           </el-radio-group>
-          <el-input
+          <el-date-picker
             v-if="mappingEndType === 'fixed'"
-            :value="formatPickerDate(computedEndDate)"
-            disabled
-            class="w-200px"
+            v-model="formData.et"
+            type="datetime"
+            placeholder="选择结束日期"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="x"
+            :clearable="true"
+            :disabled-date="disabledEndDate"
+            :disabled-hours="disabledHours"
+            :disabled-minutes="disabledMinutes"
+            :disabled-seconds="disabledSeconds"
           />
-          <span v-if="mappingEndType === 'fixed'" class="text-gray-500 text-xs">（自动计算：开始日期 + 14 天）</span>
+          <span v-if="mappingEndType === 'fixed'" class="text-gray-500 text-xs">仅可选择：开始日期 + 14、28、42、56... 天（时间固定为 00:00:00）</span>
         </div>
         <!-- 暂停期：可选，留空表示持续 -->
         <div v-else>
           <el-date-picker
             v-model="formData.et"
-            type="date"
+            type="datetime"
             placeholder="选择结束日期（可选）"
-            format="YYYY-MM-DD"
+            format="YYYY-MM-DD HH:mm:ss"
             value-format="x"
             :clearable="true"
+            :disabled-hours="disabledHours"
+            :disabled-minutes="disabledMinutes"
+            :disabled-seconds="disabledSeconds"
           />
-          <div class="text-gray-400 text-xs mt-1">留空表示持续进行中</div>
+          <div class="text-gray-400 text-xs mt-1">留空表示持续进行中（时间固定为 00:00:00）</div>
         </div>
       </el-form-item>
 
@@ -171,22 +185,15 @@ const modalTitle = computed(() => {
 
 const serverIds = computed(() => store.serverIds)
 
-// 映射任务的结束日期（自动计算为开始日期 + 14 天）
-const computedEndDate = computed(() => {
-  if (formData.value.type === DataType.MAPPING && formData.value.st) {
-    return formData.value.st + FOURTEEN_DAYS_MS
-  }
-  return formData.value.et
-})
-
 // 监听类型变化
 watch(() => formData.value.type, (newType) => {
   if (newType === DataType.MAPPING) {
     // 映射任务：根据 mappingEndType 决定结束日期
-    if (mappingEndType.value === 'fixed' && formData.value.st) {
-      formData.value.et = formData.value.st + FOURTEEN_DAYS_MS
-    } else {
+    if (mappingEndType.value === 'ongoing') {
       formData.value.et = null
+    } else if (formData.value.st && formData.value.et === null) {
+      // fixed 模式：仅在 et 为 null 时自动设置为开始日期 + 14天
+      formData.value.et = formData.value.st + FOURTEEN_DAYS_MS
     }
   } else if (newType === DataType.PAUSED) {
     // 暂停期：结束日期可选，留空表示持续
@@ -197,18 +204,24 @@ watch(() => formData.value.type, (newType) => {
 // 监听 mappingEndType 变化
 watch(mappingEndType, (newType) => {
   if (formData.value.type === DataType.MAPPING) {
-    if (newType === 'fixed' && formData.value.st) {
-      formData.value.et = formData.value.st + FOURTEEN_DAYS_MS
-    } else {
+    if (newType === 'ongoing') {
       formData.value.et = null
+    } else if (formData.value.st && formData.value.et === null) {
+      // fixed 模式：仅在 et 为 null 时自动设置为开始日期 + 14天
+      // 编辑模式下原有 et 值会被保留
+      formData.value.et = formData.value.st + FOURTEEN_DAYS_MS
     }
   }
 })
 
-// 监听开始日期变化（映射任务 fixed 模式自动更新结束日期）
-watch(() => formData.value.st, (newSt) => {
+// 监听开始日期变化（映射任务 fixed 模式，仅当 et 是默认 +14天 时才同步更新）
+watch(() => formData.value.st, (newSt, oldSt) => {
   if (formData.value.type === DataType.MAPPING && mappingEndType.value === 'fixed' && newSt) {
-    formData.value.et = newSt + FOURTEEN_DAYS_MS
+    // 只有当 et 是上一个 st + 14天（即自动生成的默认值）时才同步更新
+    const expectedOldEt = oldSt ? oldSt + FOURTEEN_DAYS_MS : null
+    if (formData.value.et === expectedOldEt || formData.value.et === null) {
+      formData.value.et = newSt + FOURTEEN_DAYS_MS
+    }
   }
 })
 
@@ -226,6 +239,8 @@ watch([() => props.mode, () => props.task], () => {
       type: props.task.type,
       cmt: props.task.cmt
     }
+    // 根据 et 设置 mappingEndType
+    mappingEndType.value = props.task.et ? 'fixed' : 'ongoing'
   } else {
     formData.value = {
       k: serverIds.value[0] || 1,
@@ -245,10 +260,43 @@ function formatTime(timestamp: number): string {
   return formatTimestamp(timestamp)
 }
 
-// 格式化日期选择器值（用于显示计算后的结束日期）
-function formatPickerDate(value: number | null): string {
-  if (!value) return ''
-  return formatTimestamp(value)
+// 计算映射任务可选的结束日期（开始日期 + 14天*n）
+// 只允许这些日期，其他日期禁用
+function disabledEndDate(time: Date): boolean {
+  // 仅对映射任务生效
+  if (formData.value.type !== DataType.MAPPING || !formData.value.st) {
+    return false // 不禁用任何日期
+  }
+
+  const startTime = formData.value.st // 已经是 0 点时间戳（value-format="x"）
+  const checkTime = time.getTime()
+
+  // 必须大于开始时间
+  if (checkTime <= startTime) {
+    return true // 禁用
+  }
+
+  // 检查是否为 14 天的倍数
+  const diffDays = Math.round((checkTime - startTime) / (24 * 60 * 60 * 1000))
+
+  // 只允许 14、28、42、56... 天（最多显示到 140 天，即 10 个周期）
+  const allowedDays = [14, 28, 42, 56, 70, 84, 98, 112, 126, 140]
+  return !allowedDays.includes(diffDays)
+}
+
+// 禁用所有非 0 的小时（只允许 00:00:00）
+function disabledHours(): number[] {
+  return Array.from({ length: 23 }, (_, i) => i + 1) // 禁用 1-23
+}
+
+// 禁用所有非 0 的分钟（只允许 00:00:00）
+function disabledMinutes(): number[] {
+  return Array.from({ length: 59 }, (_, i) => i + 1) // 禁用 1-59
+}
+
+// 禁用所有非 0 的秒（只允许 00:00:00）
+function disabledSeconds(): number[] {
+  return Array.from({ length: 59 }, (_, i) => i + 1) // 禁用 1-59
 }
 
 // 切换到编辑模式
@@ -275,7 +323,17 @@ async function handleSave() {
       let et: number | null
       if (formData.value.type === DataType.MAPPING) {
         if (mappingEndType.value === 'fixed') {
-          et = st + FOURTEEN_DAYS_MS
+          if (!formData.value.et) {
+            ElMessage.error('请选择结束日期')
+            return
+          }
+          et = dateToZeroTimestamp(formData.value.et)
+          // 校验结束时间是否为开始时间 + 14天*n
+          const duration = et - st
+          if (duration % FOURTEEN_DAYS_MS !== 0 || duration <= 0) {
+            ElMessage.error(`映射任务结束日期必须为开始日期 + 14天*n（当前跨度 ${duration / (24 * 60 * 60 * 1000)} 天不是 14 天的倍数）`)
+            return
+          }
         } else {
           et = null // 持续进行
         }
@@ -301,10 +359,38 @@ async function handleSave() {
 
       ElMessage.success('创建成功')
     } else if (mode.value === ModalMode.EDIT && currentTask.value) {
+      // 转换开始时间
+      const editSt = formData.value.st ? dateToZeroTimestamp(formData.value.st) : currentTask.value.st
+
+      // 计算编辑模式下的结束时间
+      let editEt: number | null
+      if (formData.value.type === DataType.MAPPING) {
+        if (mappingEndType.value === 'fixed') {
+          if (!formData.value.et) {
+            ElMessage.error('请选择结束日期')
+            return
+          }
+          editEt = dateToZeroTimestamp(formData.value.et)
+          // 校验结束时间是否为开始时间 + 14天*n
+          const duration = editEt - editSt
+          if (duration % FOURTEEN_DAYS_MS !== 0 || duration <= 0) {
+            ElMessage.error(`映射任务结束日期必须为开始日期 + 14天*n（当前跨度 ${duration / (24 * 60 * 60 * 1000)} 天不是 14 天的倍数）`)
+            return
+          }
+        } else {
+          editEt = null // 持续进行
+        }
+      } else {
+        // 暂停期：可选结束时间
+        editEt = formData.value.et ? dateToZeroTimestamp(formData.value.et) : null
+      }
+
       await store.update(currentTask.value.id, {
         v: formData.value.v,
         type: formData.value.type,
-        cmt: formData.value.cmt
+        cmt: formData.value.cmt,
+        st: editSt,
+        et: editEt
       })
 
       ElMessage.success('更新成功')

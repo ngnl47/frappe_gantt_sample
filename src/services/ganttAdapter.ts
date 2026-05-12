@@ -35,18 +35,46 @@ function groupByServer(mappings: ServerMapping[]): Map<number, ServerMapping[]> 
 
 /**
  * 构建被指向关系映射
- * 返回：Map<目标服务器_时间段, 源服务器任务块ID>
+ * 返回：Map<目标任务块ID, 源任务块ID列表>
  * 用于设置依赖关系，使箭头从源指向目标
+ * 支持多个源指向同一目标（多个箭头）
  */
-function buildIncomingMappings(mappings: ServerMapping[]): Map<string, string> {
-  const incomingMap = new Map<string, string>()
+function buildIncomingMappings(mappings: ServerMapping[]): Map<string, string[]> {
+  const incomingMap = new Map<string, string[]>()
 
+  // 先构建目标服务器的任务块索引（按时间段）
+  // Map<目标服务器, Map<时间段key, 任务块ID>>
+  const targetServerTasks = new Map<number, Map<string, string>>()
+  for (const item of mappings) {
+    const isOngoing = item.et === null || item.et === undefined
+    const taskKey = `${item.st}_${isOngoing ? 'ongoing' : item.et}`
+    const taskId = `${item.k}_${taskKey}`
+
+    if (!targetServerTasks.has(item.k)) {
+      targetServerTasks.set(item.k, new Map())
+    }
+    targetServerTasks.get(item.k)!.set(taskKey, taskId)
+  }
+
+  // 对于每个映射任务，找到目标服务器在相同时间段的任务块
   for (const item of mappings) {
     if (item.type === DataType.MAPPING && item.v !== null && item.v !== item.k) {
-      // 目标服务器在时间段 [st, et) 被源服务器 k 指向
-      const targetKey = `${item.v}_${item.st}_${item.et ?? 'ongoing'}`
-      const sourceTaskId = `${item.k}_${item.st}_${item.et ?? 'ongoing'}`
-      incomingMap.set(targetKey, sourceTaskId)
+      // 源任务块 ID
+      const isOngoing = item.et === null || item.et === undefined
+      const sourceTaskKey = `${item.st}_${isOngoing ? 'ongoing' : item.et}`
+      const sourceTaskId = `${item.k}_${sourceTaskKey}`
+
+      // 在目标服务器上找到相同时间段的任务块
+      const targetServerTaskMap = targetServerTasks.get(item.v)
+      if (targetServerTaskMap) {
+        const targetTaskId = targetServerTaskMap.get(sourceTaskKey)
+        if (targetTaskId) {
+          // 收集多个源指向同一目标
+          const existing = incomingMap.get(targetTaskId) || []
+          existing.push(sourceTaskId)
+          incomingMap.set(targetTaskId, existing)
+        }
+      }
     }
   }
 
@@ -80,8 +108,9 @@ export function toGanttTasks(
 
   // 甘特图结束时间 = 筛选结束时间
   // 持续任务延伸到筛选结束时间
+  // 默认：前一个月到后两个月
   const oneMonthMs = 30 * 24 * 60 * 60 * 1000
-  const ganttEnd = filterEnd ?? Date.now() + oneMonthMs
+  const ganttEnd = filterEnd ?? Date.now() + 2 * oneMonthMs
 
   // 添加一个虚拟锚点任务（不可见），用于控制甘特图时间轴范围
   // 起始时间控制甘特图左侧，结束时间控制甘特图右侧（影响持续任务显示）
@@ -103,24 +132,26 @@ export function toGanttTasks(
     items.sort((a, b) => a.st - b.st)
 
     for (const item of items) {
-      // 生成任务块 ID
-      const taskId = `${serverId}_${item.st}_${item.et ?? 'ongoing'}`
+      // 生成任务块 ID（et 为 null/undefined 时使用 'ongoing'）
+      const isOngoing = item.et === null || item.et === undefined
+      const taskId = `${serverId}_${item.st}_${isOngoing ? 'ongoing' : item.et}`
 
       // 处理依赖关系：箭头从源服务器指向目标服务器
+      // 支持多个源指向同一目标（多个箭头，逗号分隔）
       let dependencies = ''
-      const incomingSource = incomingMap.get(taskId)
-      if (incomingSource) {
-        dependencies = incomingSource
+      const incomingSources = incomingMap.get(taskId)
+      if (incomingSources && incomingSources.length > 0) {
+        dependencies = incomingSources.join(',')
       }
 
       // 处理结束时间（持续任务延伸显示）
       // 左闭右开区间 [st, et)：et 那一天不应显示，所以减去 1 小时
       // 例如 et=2026-05-26 00:00:00，显示结束为 2026-05-25 23:00:00，甘特图只渲染到 25 号
-      // 持续任务（et=null）延伸到甘特图最右侧（使用 ganttEnd）
+      // 持续任务（et=null/undefined）延伸到甘特图最右侧（使用 ganttEnd）
       const visualGapMs = 1 * 60 * 60 * 1000 // 1 小时
-      const displayEnd = item.et
-        ? item.et - visualGapMs
-        : ganttEnd
+      const displayEnd = isOngoing
+        ? ganttEnd
+        : item.et! - visualGapMs // et 不为 null/undefined，安全使用
 
       const task: GanttTask = {
         id: taskId,

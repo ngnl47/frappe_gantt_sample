@@ -93,6 +93,30 @@ async function initGantt() {
     }
   })
 
+  // 覆盖 Frappe Gantt 的 padding 行为，使时间轴精确显示筛选范围
+  const filterStart = store.timeRangeFilter?.start
+  const filterEnd = store.timeRangeFilter?.end
+
+  if (filterStart && filterEnd && ganttInstance.value) {
+    const gantt = ganttInstance.value as any
+
+    // 覆盖 gantt_start/gantt_end（移除 padding）
+    gantt.gantt_start = new Date(filterStart)
+    gantt.gantt_end = new Date(filterEnd)
+
+    // 重新生成 dates 数组（时间刻度）
+    gantt.dates = []
+    let curDate = new Date(filterStart)
+    while (curDate < new Date(filterEnd)) {
+      gantt.dates.push(new Date(curDate))
+      curDate = new Date(curDate.getTime() + gantt.options.step * 60 * 60 * 1000)
+    }
+
+    // 清空 SVG 并重新渲染
+    gantt.$svg.innerHTML = ''
+    gantt.render()
+  }
+
   // 渲染完成后调整同一服务器任务块的行位置 + 添加月份背景色
   await nextTick()
   adjustSameServerBarsToSameRow()
@@ -226,6 +250,15 @@ function adjustSameServerBarsToSameRow() {
     arrows.forEach((arrow: any) => {
       arrow.update()
     })
+  }
+
+  // 调整 arrow layer 顺序，使其在 bar layer 之上（不被任务块遮挡）
+  // Frappe Gantt 默认顺序：grid, date, arrow, progress, bar, details
+  // 需要将 arrow 移到 bar 之后
+  const arrowLayer = svg.querySelector('.arrow')
+  const barLayer = svg.querySelector('.bar')
+  if (arrowLayer && barLayer && arrowLayer.parentElement) {
+    arrowLayer.parentElement.appendChild(arrowLayer)
   }
 }
 

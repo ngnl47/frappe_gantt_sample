@@ -64,12 +64,12 @@ const endDate = ref<number | null>(null)
 // 当前筛选状态
 const timeRangeFilter = computed(() => store.timeRangeFilter)
 
-// 设置默认时间范围（当前前后一个月）
+// 设置默认时间范围（前一个月到后两个月）
 function setDefaultTimeRange() {
   const today = getTodayZero()
   const oneMonthMs = 30 * 24 * 60 * 60 * 1000 // 约30天
   startDate.value = today - oneMonthMs
-  endDate.value = today + oneMonthMs
+  endDate.value = today + 2 * oneMonthMs
 
   // 自动应用筛选
   store.setTimeRangeFilter({

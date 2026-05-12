@@ -1,5 +1,5 @@
 import { ServerMapping, DataType } from '@/types'
-import { hasTimeIntersection } from '@/utils/timeUtils'
+import { hasTimeIntersection, formatTimestamp } from '@/utils/timeUtils'
 import {
   addMapping,
   updateMapping,
@@ -60,11 +60,11 @@ export async function createMapping(
     throw new Error('缺少必填字段：k, st, type')
   }
 
-  // 映射任务（type=1）如果设置了结束时间，跨度必须为 14 天
+  // 映射任务（type=1）如果设置了结束时间，跨度必须为 14 天或 14 天的倍数
   if (data.type === DataType.MAPPING && data.et !== null && data.et !== undefined) {
     const duration = data.et - data.st
-    if (duration !== FOURTEEN_DAYS) {
-      throw new Error(`映射任务时间跨度必须为 14 天，当前为 ${duration / (24 * 60 * 60 * 1000)} 天`)
+    if (duration % FOURTEEN_DAYS !== 0) {
+      throw new Error(`映射任务时间跨度必须为 14 天或 14 天的倍数，当前为 ${duration / (24 * 60 * 60 * 1000)} 天`)
     }
   }
 
@@ -94,7 +94,12 @@ export async function createMapping(
 }
 
 /**
- * 更新记录（时间字段不允许修改）
+ * 更新记录（允许修改 st 和 et）
+ * 规则：
+ * - type=1（映射）的 et 必须为 null（持续）或 st + 14天
+ * - type=2（暂停）的 et 可以任意设置或 null
+ * - et 必须大于 st
+ * - st/et 变化后检查时间重叠
  */
 export async function updateMappingData(
   id: number,
@@ -105,12 +110,39 @@ export async function updateMappingData(
     throw new Error('记录不存在')
   }
 
-  // 时间字段 st/et 不允许修改
+  // 处理时间变化
+  const newSt = data.st !== undefined ? data.st : existing.st
+  let newEt = data.et !== undefined ? data.et : existing.et
+
+  // type=1（映射）校验：et 必须是 null 或 st + 14天*n（n为正整数）
+  const newType = data.type ?? existing.type
+  if (newType === DataType.MAPPING && newEt !== null) {
+    const duration = newEt - newSt
+    if (duration % FOURTEEN_DAYS !== 0 || duration <= 0) {
+      throw new Error(`映射任务的结束时间必须为开始时间 + 14天*n（当前跨度 ${duration / (24 * 60 * 60 * 1000)} 天不是 14 天的倍数）`)
+    }
+  }
+
+  // et 必须大于 st
+  if (newEt !== null && newEt <= newSt) {
+    throw new Error('结束时间必须大于开始时间')
+  }
+
+  // 检查时间重叠（排除自身）
+  if (newSt !== existing.st || newEt !== existing.et) {
+    const hasOverlap = await checkOverlap(existing.k, newSt, newEt, id)
+    if (hasOverlap) {
+      throw new Error('时间范围与已有记录重叠')
+    }
+  }
+
   const updated: ServerMapping = {
     ...existing,
+    st: newSt,
+    et: newEt,
     v: data.v ?? existing.v,
     cmt: data.cmt ?? existing.cmt,
-    type: data.type ?? existing.type
+    type: newType
   }
 
   return updateMapping(updated)
