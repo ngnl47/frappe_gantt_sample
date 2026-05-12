@@ -202,10 +202,10 @@ export function getGanttOptions(): GanttOptions {
     column_width: 20,
     step: 24,
     view_modes: ['Day', 'Week', 'Month'] as const,
-    bar_height: 22,
-    bar_corner_radius: 6,
+    bar_height: 15,
+    bar_corner_radius: 5,
     arrow_curve: 5,
-    padding: 14,
+    padding: 9,
     view_mode: 'Day', // 每天一个刻度
     date_format: 'YYYY-MM-DD',
     popup_trigger: null, // 禁用默认 popup，使用自定义 tooltip

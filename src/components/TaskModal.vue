@@ -349,6 +349,19 @@ async function handleSave() {
         return
       }
 
+      // 检查指向任务时间范围一致性
+      if (formData.value.v) {
+        const targetMapping = store.mappings.find(m =>
+          m.k === Number(formData.value.v) &&
+          m.st === st &&
+          (m.et === et) // et 必须完全一致（包括 null）
+        )
+        if (!targetMapping) {
+          ElMessage.error(`目标服务器 ${formData.value.v} 上不存在相同时间范围的任务`)
+          return
+        }
+      }
+
       await store.create({
         k: Number(formData.value.k),
         v: formData.value.v ? Number(formData.value.v) : null,
@@ -396,6 +409,20 @@ async function handleSave() {
         }).join('、')
         ElMessage.error(`时间与现有任务重叠：${overlapInfo}`)
         return
+      }
+
+      // 检查指向任务时间范围一致性
+      const targetV = formData.value.v ? Number(formData.value.v) : null
+      if (targetV) {
+        const targetMapping = store.mappings.find(m =>
+          m.k === targetV &&
+          m.st === editSt &&
+          (m.et === editEt)
+        )
+        if (!targetMapping) {
+          ElMessage.error(`目标服务器 ${targetV} 上不存在相同时间范围的任务`)
+          return
+        }
       }
 
       await store.update(currentTask.value.id, {

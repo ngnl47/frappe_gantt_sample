@@ -506,9 +506,15 @@ function handleBarMouseEnter(e: MouseEvent) {
   const targetServer = mapping.v ? `${mapping.v}服` : '无'
   const remark = mapping.cmt || '无'
 
+  // 计算跨度天数
+  const daysCount = mapping.et
+    ? Math.round((mapping.et - mapping.st) / (24 * 60 * 60 * 1000))
+    : null
+  const daysText = daysCount ? `共计: ${daysCount}天` : '共计: 无限'
+
   tooltipData.value = {
     title: `${mapping.k}服 (ID:${mapping.id})`,
-    content: `指向: ${targetServer}\n类型: ${taskType}\n时间: ${startDate} ~ ${endDate}\n备注: ${remark}\n创建时间: ${createTime}`
+    content: `指向: ${targetServer}\n类型: ${taskType}\n${daysText}\n时间: ${startDate} ~ ${endDate}\n备注: ${remark}\n创建时间: ${createTime}`
   }
   tooltipVisible.value = true
 }
