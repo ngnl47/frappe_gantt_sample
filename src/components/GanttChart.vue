@@ -1,5 +1,8 @@
 <template>
   <div class="gantt-chart-container" ref="containerRef">
+    <!-- 固定表头 -->
+    <div ref="fixedHeaderRef" class="fixed-header" v-show="!loading && realTaskCount > 0"></div>
+
     <div v-if="loading" class="loading-overlay">
       <el-icon class="is-loading" size="40"><Loading /></el-icon>
       <span class="ml-2 text-gray-500">加载中...</span>
@@ -56,6 +59,7 @@ const containerRef = ref<HTMLDivElement | null>(null)
 void containerRef // 用于模板绑定，避免 TS unused warning
 const ganttRef = ref<HTMLDivElement | null>(null)
 const ganttInstance = ref<Gantt | null>(null)
+const fixedHeaderRef = ref<HTMLDivElement | null>(null)
 
 // Tooltip 状态
 const tooltipVisible = ref(false)
@@ -141,12 +145,109 @@ async function initGantt() {
     gantt.render()
   }
 
-  // 渲染完成后调整同一服务器任务块的行位置 + 添加月份背景色
+  // 渲染完成后：复制表头 + 滚动同步 + 调整行位置 + 添加月份背景色
   await nextTick()
+  copyHeaderToFixedContainer()
+  setupScrollSync()
   adjustSameServerBarsToSameRow()
   addMonthBackgrounds()
   scrollToToday()
   bindTooltipEvents()
+}
+
+// 复制表头到固定容器
+function copyHeaderToFixedContainer() {
+  if (!ganttRef.value || !fixedHeaderRef.value) return
+
+  const svg = ganttRef.value.querySelector('svg.gantt')
+  if (!svg) return
+
+  // 清空固定容器
+  fixedHeaderRef.value.innerHTML = ''
+
+  // 创建固定表头 SVG
+  const fixedSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  fixedSvg.setAttribute('class', 'gantt fixed-header-svg')
+
+  // 复制宽度
+  const width = svg.getAttribute('width')
+  if (width) {
+    fixedSvg.setAttribute('width', width)
+  }
+
+  // 设置 viewBox，显示表头区域（从 y=0 到 y=60，包含 lower-text）
+  const originalViewBox = svg.getAttribute('viewBox')
+  if (originalViewBox) {
+    // viewBox 格式: "x y width height"，修改 y 和 height
+    const parts = originalViewBox.split(' ')
+    if (parts.length === 4) {
+      // 保持 x 和 width，y=0，height=60（包含 upper 和 lower 文字）
+      fixedSvg.setAttribute('viewBox', `${parts[0]} 0 ${parts[2]} 60`)
+    }
+  }
+
+  fixedSvg.setAttribute('height', '60')
+
+  // 复制 grid-header（表头背景）
+  const gridHeader = svg.querySelector('.grid-header')
+  if (gridHeader) {
+    const clone = gridHeader.cloneNode(true) as SVGElement
+    clone.setAttribute('y', '0')
+    fixedSvg.appendChild(clone)
+  }
+
+  // 复制 date layer（日期文字）
+  const dateLayer = svg.querySelector('.date')
+  if (dateLayer) {
+    fixedSvg.appendChild(dateLayer.cloneNode(true))
+  }
+
+  // 复制 today-highlight（只复制表头部分）
+  const todayHighlight = svg.querySelector('.today-highlight')
+  if (todayHighlight) {
+    const clone = todayHighlight.cloneNode(true) as SVGElement
+    clone.setAttribute('height', '60')
+    clone.setAttribute('y', '0')
+    fixedSvg.appendChild(clone)
+  }
+
+  // 复制 tick 刻度线，从 y=0 开始
+  const ticks = svg.querySelectorAll('.tick')
+  ticks.forEach(tick => {
+    const clone = tick.cloneNode(true) as SVGElement
+    // 原格式: M x y v height
+    // 修改为从 y=0 开始，高度 60
+    const d = clone.getAttribute('d') || ''
+    const match = d.match(/M (\d+\.?\d*) (\d+\.?\d*) v (\d+\.?\d*)/)
+    if (match) {
+      const x = match[1]
+      clone.setAttribute('d', `M ${x} 0 v 60`)
+    }
+    // 保留 thick 类（月初粗线）
+    if (tick.classList.contains('thick')) {
+      clone.classList.add('thick')
+    }
+    fixedSvg.appendChild(clone)
+  })
+
+  fixedHeaderRef.value.appendChild(fixedSvg)
+}
+
+// 设置滚动同步
+function setupScrollSync() {
+  if (!ganttRef.value || !fixedHeaderRef.value) return
+
+  const ganttContainer = ganttRef.value.querySelector('.gantt-container') as HTMLElement
+  if (!ganttContainer) return
+
+  const fixedSvg = fixedHeaderRef.value.querySelector('svg.fixed-header-svg') as SVGElement
+
+  // 监听主体滚动，同步固定表头 SVG 的位置（使用 transform）
+  ganttContainer.addEventListener('scroll', () => {
+    if (fixedSvg) {
+      fixedSvg.style.transform = `translateX(-${ganttContainer.scrollLeft}px)`
+    }
+  })
 }
 
 // 将同一服务器（k 值相同）的任务块调整到同一行
@@ -557,6 +658,25 @@ defineExpose({
   background: white;
   position: relative;
   min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fixed-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+  overflow: hidden;
+  height: 80px; /* 20 padding + 60 SVG height */
+  box-sizing: border-box;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  padding: 20px 20px 0; /* 只有顶部和左右 padding */
+}
+
+.fixed-header-svg {
+  display: block;
 }
 
 .loading-overlay {
@@ -580,8 +700,10 @@ defineExpose({
 }
 
 .gantt-wrapper {
-  padding: 20px;
+  padding: 0;
   min-height: 400px;
+  flex: 1;
+  /* overflow: auto 移除，让父容器 gantt-chart-container 处理滚动 */
 }
 
 .custom-tooltip {

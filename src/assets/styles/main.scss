@@ -56,3 +56,43 @@
   fill: #1a1a1a !important;
   font-weight: 600 !important;
 }
+
+// 隐藏原始甘特图中的表头部分（使用固定表头代替）
+.gantt-wrapper .gantt .grid-header {
+  display: none !important;
+}
+
+.gantt-wrapper .gantt .date {
+  display: none !important;
+}
+
+// tick 保留在任务区域，向上偏移
+.gantt-wrapper .gantt .tick {
+  transform: translateY(-50px) !important;
+}
+
+// gantt-container 添加 padding（只有左右和底部）
+.gantt-wrapper .gantt-container {
+  padding: 0 20px 20px 20px !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+}
+
+// 向上偏移任务区域，移除表头空白（header_height = 50）
+.gantt-wrapper .gantt .grid-row,
+.gantt-wrapper .gantt .row-line,
+.gantt-wrapper .gantt .bar-wrapper,
+.gantt-wrapper .gantt .month-background,
+.gantt-wrapper .gantt .month-separator {
+  transform: translateY(-50px) !important;
+}
+
+// 箭头也需要向上偏移
+.gantt-wrapper .gantt .arrow {
+  transform: translateY(-50px) !important;
+}
+
+// today-highlight 只显示任务区域部分，向上偏移
+.gantt-wrapper .gantt .today-highlight {
+  transform: translateY(-50px) !important;
+}
