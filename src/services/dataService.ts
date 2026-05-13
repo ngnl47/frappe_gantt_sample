@@ -185,6 +185,30 @@ export async function initPresetData(): Promise<void> {
 }
 
 /**
+ * 导出数据为 JSON
+ */
+export async function exportData(): Promise<string> {
+  const all = await getAllMappings()
+  return JSON.stringify(all, null, 2)
+}
+
+/**
+ * 导入数据（清空现有数据后导入）
+ */
+export async function importData(jsonData: string): Promise<void> {
+  try {
+    const data = JSON.parse(jsonData) as ServerMapping[]
+    if (!Array.isArray(data)) {
+      throw new Error('数据格式错误：必须是数组')
+    }
+    await clearAllMappings()
+    await bulkAddMappings(data)
+  } catch (e) {
+    throw new Error('导入失败：' + (e as Error).message)
+  }
+}
+
+/**
  * 导出数据服务接口
  */
 export const dataService = {
@@ -198,5 +222,7 @@ export const dataService = {
   getUnfinishedTask,
   checkOverlap,
   initPresetData,
-  clearAll: clearAllMappings
+  clearAll: clearAllMappings,
+  exportData,
+  importData
 }

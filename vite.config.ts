@@ -8,5 +8,8 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src')
     }
+  },
+  server: {
+    host: true // 允许通过本地 IP 访问
   }
 })

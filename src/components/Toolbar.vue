@@ -45,6 +45,19 @@
     <el-button type="info" @click="handleTruncate" class="ml-2">
       截断持续任务
     </el-button>
+
+    <!-- 数据迁移 -->
+    <el-button @click="handleExport" class="ml-4">
+      导出数据
+    </el-button>
+    <el-upload
+      :show-file-list="false"
+      accept=".json"
+      :before-upload="handleImport"
+      class="ml-2"
+    >
+      <el-button>导入数据</el-button>
+    </el-upload>
   </div>
 </template>
 
@@ -52,9 +65,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { useGanttStore } from '@/stores/ganttStore'
+import { dataService } from '@/services/dataService'
 import { dateToZeroTimestamp, getTodayZero } from '@/utils/timeUtils'
 import { ModalMode } from '@/types'
 import { ElMessage } from 'element-plus'
+import type { UploadRawFile } from 'element-plus'
 
 const emit = defineEmits<{
   (e: 'openModal', mode: ModalMode): void
@@ -129,6 +144,36 @@ async function handleInitPreset() {
 // 截断持续任务
 function handleTruncate() {
   emit('openTruncate')
+}
+
+// 导出数据
+async function handleExport() {
+  try {
+    const jsonData = await dataService.exportData()
+    const blob = new Blob([jsonData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `gantt_data_${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('数据已导出')
+  } catch (error: any) {
+    ElMessage.error(error.message || '导出失败')
+  }
+}
+
+// 导入数据
+async function handleImport(file: UploadRawFile) {
+  try {
+    const text = await file.text()
+    await dataService.importData(text)
+    await store.loadAll()
+    ElMessage.success('数据已导入')
+  } catch (error: any) {
+    ElMessage.error(error.message || '导入失败')
+  }
+  return false // 阻止默认上传行为
 }
 </script>
 
