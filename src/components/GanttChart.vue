@@ -128,13 +128,17 @@ async function initGantt() {
   if (filterStart && filterEnd && ganttInstance.value) {
     const gantt = ganttInstance.value as any
 
-    // 覆盖 gantt_start/gantt_end（移除 padding）
-    gantt.gantt_start = new Date(filterStart)
+    // 左侧额外加一天，为箭头绘制预留空间
+    const oneDayMs = 24 * 60 * 60 * 1000
+    const ganttStartWithPadding = filterStart - oneDayMs
+
+    // 覆盖 gantt_start/gantt_end
+    gantt.gantt_start = new Date(ganttStartWithPadding)
     gantt.gantt_end = new Date(filterEnd)
 
     // 重新生成 dates 数组（时间刻度）
     gantt.dates = []
-    let curDate = new Date(filterStart)
+    let curDate = new Date(ganttStartWithPadding)
     while (curDate < new Date(filterEnd)) {
       gantt.dates.push(new Date(curDate))
       curDate = new Date(curDate.getTime() + gantt.options.step * 60 * 60 * 1000)
