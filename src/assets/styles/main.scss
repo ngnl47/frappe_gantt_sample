@@ -13,6 +13,12 @@
   stroke: #D32F2F !important;
 }
 
+// 任务从更早处延伸过来（st < filterStart），左侧无圆角
+.gantt .bar-wrapper.task-extends-left .bar {
+  // 用 clip-path 裁剪左侧圆角区域
+  clip-path: inset(0 0 0 6px round 0 5px 5px 0);
+}
+
 // 当前日期高亮（橙色）
 .gantt .today-highlight {
   fill: rgba(255, 152, 0, 0.3) !important;

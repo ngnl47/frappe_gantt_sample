@@ -145,23 +145,35 @@ export function toGanttTasks(
         dependencies = incomingSources.join(',')
       }
 
-      // 处理结束时间（持续任务延伸显示）
-      // 左闭右开区间 [st, et)：et 那一天不应显示，所以减去 1 小时
-      // 例如 et=2026-05-26 00:00:00，显示结束为 2026-05-25 23:00:00，甘特图只渲染到 25 号
-      // 持续任务（et=null/undefined）延伸到甘特图最右侧（使用 ganttEnd）
+      // 处理显示时间范围
+      // 1. 如果 st 在筛选范围之前，显示起点调整为 filterStart（任务块左边界从筛选起点开始）
+      // 2. 持续任务延伸到筛选结束时间 filterEnd
+      // 3. 左闭右开区间 [st, et)：et 那一天不应显示，所以减去 1 小时
       const visualGapMs = 1 * 60 * 60 * 1000 // 1 小时
+
+      // 显示起点：如果实际 st 在筛选范围之前，则从筛选起点开始显示
+      const isStartBeforeFilter = filterStart && item.st < filterStart
+      const displayStart = isStartBeforeFilter ? filterStart : item.st
+
+      // 显示终点：持续任务延伸到筛选结束时间
       const displayEnd = isOngoing
-        ? ganttEnd
-        : item.et! - visualGapMs // et 不为 null/undefined，安全使用
+        ? (filterEnd ?? ganttEnd)
+        : item.et! - visualGapMs
+
+      // 自定义类：基础类 + 延伸标记类（st 在筛选范围之前）
+      let customClass = item.type === DataType.MAPPING ? 'task-mapping' : 'task-paused'
+      if (isStartBeforeFilter) {
+        customClass += ' task-extends-left' // 视觉标记：左侧无圆角
+      }
 
       const task: GanttTask = {
         id: taskId,
         name: `${serverId}服`,
-        start: timestampToISO(item.st),
+        start: timestampToISO(displayStart),
         end: timestampToISO(displayEnd),
         progress: 0,
         dependencies,
-        custom_class: item.type === DataType.MAPPING ? 'task-mapping' : 'task-paused',
+        custom_class: customClass,
         _serverId: serverId,
         _mappingId: item.id
       }
