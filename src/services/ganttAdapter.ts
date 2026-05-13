@@ -128,7 +128,11 @@ export function toGanttTasks(
   }
   tasks.push(anchorTask)
 
-  for (const [serverId, items] of grouped) {
+  // 按 serverId (k) 递增排序遍历
+  const sortedServerIds = Array.from(grouped.keys()).sort((a, b) => a - b)
+
+  for (const serverId of sortedServerIds) {
+    const items = grouped.get(serverId)!
     // 每个服务器一行，任务块按时间排序
     items.sort((a, b) => a.st - b.st)
 
