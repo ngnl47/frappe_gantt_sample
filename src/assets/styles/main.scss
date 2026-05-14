@@ -2,15 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-// Frappe Gantt v1.x 任务块样式
+// Frappe Gantt v1.x 任务块样式 (Nordic 柔和配色)
 .gantt .bar-wrapper.task-mapping .bar {
-  fill: #4CAF50 !important;
-  stroke: #388E3C !important;
+  fill: #7CB518 !important;
+  stroke: #5F9E0F !important;
 }
 
 .gantt .bar-wrapper.task-paused .bar {
-  fill: #F44336 !important;
-  stroke: #D32F2F !important;
+  fill: #BF616A !important;
+  stroke: #A65D5F !important;
+}
+
+// 任务块文字颜色（白色，配合柔和背景）
+.gantt .bar-wrapper .bar-label {
+  fill: #FFFFFF !important;
+  font-weight: 500 !important;
 }
 
 // 任务从更早处延伸过来，左侧无圆角
@@ -44,19 +50,19 @@
   display: none !important;
 }
 
-// 依赖箭头描边层（深色背景）
+// 依赖箭头描边层（中灰，浅一点）
 .gantt .arrow-stroke {
-  stroke: rgba(0, 0, 0, 0.15) !important;
-  stroke-width: 4px !important;
+  stroke: #4C566A !important;
+  stroke-width: 5px !important;
   stroke-linecap: round;
   stroke-linejoin: round;
   fill: none;
 }
 
-// 依赖箭头主线（橙色）
+// 依赖箭头主线（亮黄色，高对比度）
 .gantt .arrow {
-  stroke: #E6A23C !important;
-  stroke-width: 2px !important;
+  stroke: #EBCB8B !important;
+  stroke-width: 2.5px !important;
   stroke-linecap: round;
   stroke-linejoin: round;
   fill: none;
