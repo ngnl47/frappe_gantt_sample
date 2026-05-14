@@ -12,6 +12,8 @@ export function createSVG(tag, attrs) {
             parent.appendChild(elem);
         } else if (attr === 'innerHTML') {
             elem.innerHTML = attrs.innerHTML;
+        } else if (attr === 'clipPath') {
+            elem.setAttribute('clip-path', 'url(#' + attrs[attr] + ')');
         } else {
             elem.setAttribute(attr, attrs[attr]);
         }
@@ -38,7 +40,7 @@ function getAnimationElement(
     from,
     to,
     dur = '0.4s',
-    begin = '0.1s'
+    begin = '0.1s',
 ) {
     const animEl = svgElement.querySelector('animate');
     if (animEl) {

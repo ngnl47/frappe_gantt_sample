@@ -14,7 +14,11 @@
       "Bash(./node_modules/.bin/rollup -c)",
       "Bash(node *)",
       "Bash(npm rebuild *)",
-      "Bash(npx terser *)"
+      "Bash(npx terser *)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "WebFetch(domain:github.com)",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(npm info *)"
     ]
   }
 }

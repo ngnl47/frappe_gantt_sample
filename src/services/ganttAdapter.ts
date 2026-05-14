@@ -1,22 +1,47 @@
 import { ServerMapping, GanttTask, DataType } from '@/types'
 import { timestampToISO } from '@/utils/timeUtils'
 
-type ViewMode = 'Day' | 'Week' | 'Month' | 'Quarter Day' | 'Half Day'
+type ViewMode = 'Day' | 'Week' | 'Month' | 'Quarter Day' | 'Half Day' | 'Year'
+
+// v1.x Popup context type (simplified for adapter)
+interface PopupContext {
+  task: any
+  chart: any
+  set_title: (html: string) => void
+  set_subtitle: (html: string) => void
+  set_details: (html: string) => void
+  add_action: (label: string, callback: (task: any, gantt: any) => void) => void
+  hide: () => void
+}
 
 interface GanttOptions {
-  header_height?: number
+  // Dimensions (v1.x: header_height split)
+  upper_header_height?: number
+  lower_header_height?: number
   column_width?: number
   step?: number
-  view_modes?: readonly ViewMode[]
+  view_modes?: ViewMode[]
   bar_height?: number
   bar_corner_radius?: number
   arrow_curve?: number
   padding?: number
   view_mode?: ViewMode
   date_format?: string
-  popup_trigger?: string | null
-  custom_popup_html?: string | null
   language?: string
+  // Access control (NEW)
+  readonly?: boolean
+  readonly_dates?: boolean
+  readonly_progress?: boolean
+  // Visual (NEW)
+  lines?: 'none' | 'vertical' | 'horizontal' | 'both'
+  today_button?: boolean
+  view_mode_select?: boolean
+  // Behavior (NEW)
+  infinite_padding?: boolean
+  scroll_to?: 'today' | 'start' | 'end' | string | null
+  // Popup (RESTRUCTURED)
+  popup_on?: 'click' | 'hover'
+  popup?: (ctx: PopupContext) => string | boolean | void
 }
 
 /**
@@ -35,42 +60,44 @@ function groupByServer(mappings: ServerMapping[]): Map<number, ServerMapping[]> 
 }
 
 /**
- * 构建被指向关系映射
+ * 构建依赖关系映射
+ * 同一时间段（st, et 相同）的任务块为一组，组内 k 指向 v
  * 返回：Map<目标任务块ID, 源任务块ID列表>
- * 用于设置依赖关系，使箭头从源指向目标
- * 支持多个源指向同一目标（多个箭头）
+ * 箭头从源(k)指向目标(v)
  */
 function buildIncomingMappings(mappings: ServerMapping[]): Map<string, string[]> {
   const incomingMap = new Map<string, string[]>()
 
-  // 先构建目标服务器的任务块索引（按时间段）
-  // Map<目标服务器, Map<时间段key, 任务块ID>>
-  const targetServerTasks = new Map<number, Map<string, string>>()
+  // 按时间段分组任务块
+  // Map<时间段key, Map<服务器ID, 任务块ID>>
+  const timeGroupTasks = new Map<string, Map<number, string>>()
   for (const item of mappings) {
     const isOngoing = item.et === null || item.et === undefined
     const taskKey = `${item.st}_${isOngoing ? 'ongoing' : item.et}`
     const taskId = `${item.k}_${taskKey}`
 
-    if (!targetServerTasks.has(item.k)) {
-      targetServerTasks.set(item.k, new Map())
+    if (!timeGroupTasks.has(taskKey)) {
+      timeGroupTasks.set(taskKey, new Map())
     }
-    targetServerTasks.get(item.k)!.set(taskKey, taskId)
+    timeGroupTasks.get(taskKey)!.set(item.k, taskId)
   }
 
-  // 对于每个映射任务，找到目标服务器在相同时间段的任务块
+  // 对于每个 mapping，在同一时间段内建立 k → v 的指向关系
   for (const item of mappings) {
+    // 只有 type=1 (映射) 且 v 不为空 且 v != k 才有指向
     if (item.type === DataType.MAPPING && item.v !== null && item.v !== item.k) {
-      // 源任务块 ID
       const isOngoing = item.et === null || item.et === undefined
-      const sourceTaskKey = `${item.st}_${isOngoing ? 'ongoing' : item.et}`
-      const sourceTaskId = `${item.k}_${sourceTaskKey}`
+      const taskKey = `${item.st}_${isOngoing ? 'ongoing' : item.et}`
 
-      // 在目标服务器上找到相同时间段的任务块
-      const targetServerTaskMap = targetServerTasks.get(item.v)
-      if (targetServerTaskMap) {
-        const targetTaskId = targetServerTaskMap.get(sourceTaskKey)
+      // 源任务块（k 服务器）
+      const sourceTaskId = `${item.k}_${taskKey}`
+
+      // 目标任务块（v 服务器，同一时间段）
+      const targetServerTasks = timeGroupTasks.get(taskKey)
+      if (targetServerTasks) {
+        const targetTaskId = targetServerTasks.get(item.v)
         if (targetTaskId) {
-          // 收集多个源指向同一目标
+          // 箭头从源指向目标
           const existing = incomingMap.get(targetTaskId) || []
           existing.push(sourceTaskId)
           incomingMap.set(targetTaskId, existing)
@@ -164,11 +191,10 @@ export function toGanttTasks(
         ? (filterEnd ?? ganttEnd)
         : item.et! - visualGapMs
 
-      // 自定义类：基础类 + 延伸标记类（st 在筛选范围之前）
-      let customClass = item.type === DataType.MAPPING ? 'task-mapping' : 'task-paused'
-      if (isStartBeforeFilter) {
-        customClass += ' task-extends-left' // 视觉标记：左侧无圆角
-      }
+      // 自定义类：v1.x 只支持单个类名
+      // 基础类
+      const customClass = item.type === DataType.MAPPING ? 'task-mapping' : 'task-paused'
+      // 延伸标记通过 _extendsLeft 属性传递，后续在组件中添加类名
 
       const task: GanttTask = {
         id: taskId,
@@ -179,7 +205,9 @@ export function toGanttTasks(
         dependencies,
         custom_class: customClass,
         _serverId: serverId,
-        _mappingId: item.id
+        _mappingId: item.id,
+        // 延伸标记：用于后续添加额外类名
+        _extendsLeft: isStartBeforeFilter ? true : false
       }
 
       tasks.push(task)
@@ -210,22 +238,62 @@ export function parseTaskId(taskId: string): {
 }
 
 /**
- * 获取甘特图视图配置
+ * 获取甘特图视图配置 (v1.x)
  */
 export function getGanttOptions(): GanttOptions {
-  return {
-    header_height: 50,
+  // 自定义 Day 视图模式，禁用默认 padding
+  const customDayViewMode = {
+    name: 'Day',
+    padding: ['0d', '0d'], // 无 padding，精确控制时间范围
+    step: '1d',
+    date_format: 'YYYY-MM-DD',
     column_width: 20,
-    step: 24,
-    view_modes: ['Day', 'Week', 'Month'] as const,
+    lower_text: (d: Date, ld: Date | null) => {
+      if (!ld || d.getDate() !== ld.getDate()) {
+        return d.getDate().toString()
+      }
+      return ''
+    },
+    upper_text: (d: Date, ld: Date | null) => {
+      if (!ld || d.getMonth() !== ld.getMonth()) {
+        const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
+        return monthNames[d.getMonth()]
+      }
+      return ''
+    },
+    thick_line: (d: Date) => d.getDate() === 1, // 月份第一天显示粗线（月份间隔）
+  }
+
+  return {
+    // Dimensions - header_height 拆分为 upper/lower
+    upper_header_height: 30,
+    lower_header_height: 20,
+    column_width: 20,
     bar_height: 15,
     bar_corner_radius: 5,
     arrow_curve: 5,
     padding: 9,
-    view_mode: 'Day', // 每天一个刻度
+    view_mode: customDayViewMode as any,
+    view_modes: [customDayViewMode as any, 'Week', 'Month'],
     date_format: 'YYYY-MM-DD',
-    popup_trigger: null, // 禁用默认 popup，使用自定义 tooltip
-    custom_popup_html: null,
-    language: 'zh'
+    language: 'zh',
+
+    // Access control - 禁止编辑
+    readonly: true,
+    readonly_dates: true,
+    readonly_progress: true,
+
+    // Visual - 显示垂直线（通过 CSS 只保留月份分隔线）+ 水平线（行分隔）
+    lines: 'both',
+    today_button: false,
+    view_mode_select: false,
+
+    // v1.x 关键配置：禁用自动 padding，精确控制时间范围
+    infinite_padding: false,
+    scroll_to: null,
+
+    // Popup - 使用新 API 禁用
+    popup_on: 'click',
+    popup: () => false,
   }
 }

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-// Frappe Gantt 任务块样式（custom_class 设置在 bar-wrapper 上，bar 是实际的矩形）
+// Frappe Gantt v1.x 任务块样式
 .gantt .bar-wrapper.task-mapping .bar {
   fill: #4CAF50 !important;
   stroke: #388E3C !important;
@@ -13,15 +13,20 @@
   stroke: #D32F2F !important;
 }
 
-// 任务从更早处延伸过来（st < filterStart），左侧无圆角
+// 任务从更早处延伸过来，左侧无圆角
 .gantt .bar-wrapper.task-extends-left .bar {
-  // 用 clip-path 裁剪左侧圆角区域
   clip-path: inset(0 0 0 6px round 0 5px 5px 0);
 }
 
-// 当前日期高亮（橙色）
-.gantt .today-highlight {
-  fill: rgba(255, 152, 0, 0.3) !important;
+// 当前日期高亮（橙色整列背景）- v1.x 使用 .current-highlight (HTML div)
+.gantt-container .current-highlight {
+  position: absolute !important;
+  background: rgba(255, 152, 0, 0.25) !important;
+  width: 20px !important; // column_width
+  top: 0 !important;
+  bottom: 0 !important;
+  height: auto !important;
+  z-index: 1 !important;
 }
 
 // 锚点任务（透明，用于控制时间轴起点）
@@ -34,7 +39,7 @@
   opacity: 0 !important;
 }
 
-// 禁用任务块拖拽调整滑块（防止误改数据）
+// 禁用任务块拖拽调整滑块
 .gantt .handle-group {
   display: none !important;
 }
@@ -42,63 +47,31 @@
 // 依赖箭头样式
 .gantt .arrow {
   stroke: #E6A23C !important;
-  stroke-width: 2.5px !important;
+  stroke-width: 3px !important;
 }
 
-// 增强月初刻度线（月份边界）
+// 只显示月份分隔线（thick），隐藏普通每日刻度线
+.gantt .tick:not(.thick) {
+  display: none !important;
+}
+
+// 月份分隔线（灰色，在 grid-row 之上）
 .gantt .tick.thick {
-  stroke: #333 !important;
+  stroke: #999 !important;
   stroke-width: 1.5 !important;
 }
 
-// 表头文字样式
-.gantt .grid-header text {
-  font-size: 12px;
-  font-weight: 500;
+// grid-row 在 tick 之下
+.gantt .grid-row {
+  opacity: 0.5;
 }
 
-// 月份文字（upper）更醒目
-.gantt text[class*="upper"] {
-  fill: #1a1a1a !important;
-  font-weight: 600 !important;
+// 行间隔变色（偶数行浅灰色背景）
+.gantt .grid-row:nth-child(even) {
+  fill: rgba(240, 240, 240, 0.8) !important;
 }
 
-// 隐藏原始甘特图中的表头部分（使用固定表头代替）
-.gantt-wrapper .gantt .grid-header {
-  display: none !important;
-}
-
-.gantt-wrapper .gantt .date {
-  display: none !important;
-}
-
-// tick 保留在任务区域，向上偏移
-.gantt-wrapper .gantt .tick {
-  transform: translateY(-50px) !important;
-}
-
-// gantt-container 添加 padding（只有左右和底部）
-.gantt-wrapper .gantt-container {
-  padding: 0 20px 20px 20px !important;
-  overflow-x: auto !important;
-  overflow-y: visible !important;
-}
-
-// 向上偏移任务区域，移除表头空白（header_height = 50）
-.gantt-wrapper .gantt .grid-row,
-.gantt-wrapper .gantt .row-line,
-.gantt-wrapper .gantt .bar-wrapper,
-.gantt-wrapper .gantt .month-background,
-.gantt-wrapper .gantt .month-separator {
-  transform: translateY(-50px) !important;
-}
-
-// 箭头也需要向上偏移
-.gantt-wrapper .gantt .arrow {
-  transform: translateY(-50px) !important;
-}
-
-// today-highlight 只显示任务区域部分，向上偏移
-.gantt-wrapper .gantt .today-highlight {
-  transform: translateY(-50px) !important;
+// 月份背景样式
+.gantt .month-background {
+  opacity: 1;
 }

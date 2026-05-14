@@ -24,9 +24,10 @@ export interface GanttTask {
   end: string;          // 结束时间，ISO 格式（持续任务延伸显示）
   progress: number;     // 进度百分比，默认 0
   dependencies: string; // 依赖的任务块 ID
-  custom_class?: string; // 自定义 CSS 类：task-mapping/task-paused
+  custom_class?: string; // 自定义 CSS 类：task-mapping/task-paused（v1.x 只支持单个类名）
   _serverId: number;    // 服务器 ID（扩展字段）
   _mappingId: number;   // 业务数据 ID（扩展字段）
+  _extendsLeft?: boolean; // 是否从左侧延伸（扩展字段，用于添加额外类名）
 }
 
 // 时间范围筛选参数
