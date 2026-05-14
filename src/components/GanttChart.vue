@@ -341,7 +341,7 @@ function adjustSameServerBarsToSameRow() {
     // 为每个目标任务块创建箭头
     // 按时间段（st）分组，同一时间段内的汇入箭头做像素偏移
     // 不同时间段独立计算偏移，避免全局偏移过大
-    const arrowOffsetStep = 8  // 每个箭头之间的水平间距
+    const arrowOffsetStep = 6  // 每个箭头之间的水平间距
 
     // 按时间段分组目标任务块
     // Map<时间段st, { targets: 任务块信息列表 }>
