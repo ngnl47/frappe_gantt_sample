@@ -311,69 +311,120 @@ function adjustSameServerBarsToSameRow() {
     // 手动创建箭头：遍历任务，根据 dependencies 创建箭头
     const tasks = gantt.tasks
     const bars = gantt.bars
+    const arrowCurve = options.arrow_curve || 5
+
+    // 先收集所有箭头关系，按目标任务块分组
+    // Map<目标任务块ID, { sources: 源任务块ID列表, targetBar:目标任务块 }>
+    const arrowGroups = new Map<string, { sources: string[], targetBar: any }>()
 
     for (const task of tasks) {
       if (task.id === '__anchor__' || !task.dependencies) continue
 
       const deps = Array.isArray(task.dependencies) ? task.dependencies : task.dependencies.split(',')
+      const toBar = bars.find((b: any) => b.task.id === task.id)
+      if (!toBar) continue
 
+      const sources: string[] = []
       for (const depId of deps) {
         if (!depId || depId === '__anchor__') continue
-
-        // 找到依赖任务的 bar（使用 find 而不是 bars[_index]）
         const fromBar = bars.find((b: any) => b.task.id === depId)
-        const toBar = bars.find((b: any) => b.task.id === task.id)
-
-        if (!fromBar || !toBar) continue
-
-        // 获取正确的 y 位置
-        const fromIndex = fromBar.task._index ?? 0
-        const toIndex = toBar.task._index ?? 0
-
-        const fromY = headerHeight + fromIndex * rowHeight + padding / 2 + barHeight / 2
-        const toY = headerHeight + toIndex * rowHeight + padding / 2 + barHeight / 2
-
-        // 创建箭头 SVG path 元素
-        // 箭头从源任务块左边缘出发，到达目标任务块左边缘
-        // 同一时间段的任务块在同一列，从左侧出发，向左偏移，然后垂直移动到目标
-        const fromX = fromBar.$bar.getX()
-        const toX = toBar.$bar.getX()
-        const arrowCurve = options.arrow_curve || 5
-
-        // 箭头偏移量（从任务块左边缘向左偏移）
-        const offsetX = -15  // 向左延伸15像素，让箭头更明显
-
-        let pathStr = ''
-        if (Math.abs(fromY - toY) < 1) {
-          // 同一行：水平线（这种情况同一时间段内不应该发生）
-          pathStr = `M ${fromX} ${fromY} H ${toX} m -5 -5 l 5 5 l -5 5`
-        } else {
-          // 不同行：从左侧出发，向左偏移，垂直移动到目标行，再回到目标左边缘
-          const exitX = fromX + offsetX  // 从源任务块左边向左偏移一点出发
-
-          if (fromY < toY) {
-            // 向下：先向左，再向下，再向右到达目标
-            pathStr = `M ${fromX} ${fromY} H ${exitX} V ${toY} H ${toX} m -5 -5 l 5 5 l -5 5`
-          } else {
-            // 向上：先向左，再向上，再向右到达目标
-            pathStr = `M ${fromX} ${fromY} H ${exitX} V ${toY} H ${toX} m -5 -5 l 5 5 l -5 5`
-          }
+        if (fromBar) {
+          sources.push(depId)
         }
+      }
 
-        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-        pathEl.setAttribute('d', pathStr)
-        pathEl.setAttribute('class', 'arrow')
-        pathEl.setAttribute('data-from', depId)
-        pathEl.setAttribute('data-to', task.id)
-        arrowLayer.appendChild(pathEl)
+      if (sources.length > 0) {
+        arrowGroups.set(task.id, { sources, targetBar: toBar })
+      }
+    }
 
-        // 保存箭头引用（用于后续更新）
-        gantt.arrows.push({
-          from_task: fromBar,
-          to_task: toBar,
-          element: pathEl,
-          path: pathStr
-        })
+    // 为每个目标任务块创建箭头
+    // 按时间段（st）分组，同一时间段内的汇入箭头做像素偏移
+    // 不同时间段独立计算偏移，避免全局偏移过大
+    const arrowOffsetStep = 8  // 每个箭头之间的水平间距
+
+    // 按时间段分组目标任务块
+    // Map<时间段st, { targets: 任务块信息列表 }>
+    const timeGroups = new Map<number, Array<{ targetId: string, sources: string[], targetBar: any }>>()
+
+    for (const [targetId, { sources, targetBar }] of arrowGroups) {
+      // 从目标任务块 ID 解析 st（格式：serverId_st_et）
+      const parts = targetId.split('_')
+      const st = parseInt(parts[1], 10)
+
+      if (!timeGroups.has(st)) {
+        timeGroups.set(st, [])
+      }
+      timeGroups.get(st)!.push({ targetId, sources, targetBar })
+    }
+
+    // 按时间段处理箭头
+    for (const [st, targets] of timeGroups) {
+      let offsetIndex = 0  // 该时间段内的偏移计数器
+
+      for (const { targetId, sources, targetBar } of targets) {
+        // 该时间段内每个目标使用不同的偏移
+        const offsetX = -15 - offsetIndex * arrowOffsetStep
+        offsetIndex++
+
+        const toIndex = targetBar.task._index ?? 0
+        const toY = headerHeight + toIndex * rowHeight + padding / 2 + barHeight / 2
+        const toX = targetBar.$bar.getX()
+
+        // 按源任务块的 _index 排序，使箭头从上到下排列
+        const sortedSources = sources.map(sourceId => {
+          const fromBar = bars.find((b: any) => b.task.id === sourceId)
+          return { sourceId, fromBar, fromIndex: fromBar?.task._index ?? 0 }
+        }).sort((a, b) => a.fromIndex - b.fromIndex)
+
+        for (const { sourceId, fromBar } of sortedSources) {
+          if (!fromBar) continue
+
+          const fromIndex = fromBar.task._index ?? 0
+          const fromY = headerHeight + fromIndex * rowHeight + padding / 2 + barHeight / 2
+          const fromX = fromBar.$bar.getX()
+
+          // 同一时间段内，同一目标的箭头使用相同的水平偏移
+          const exitX = fromX + offsetX
+
+          let pathStr = ''
+          if (Math.abs(fromY - toY) < 1) {
+            // 同一行：水平线
+            pathStr = `M ${fromX} ${fromY} H ${toX} m -5 -5 l 5 5 l -5 5`
+          } else {
+            // 不同行：从左侧出发，向左偏移，垂直移动到目标行，再回到目标左边缘
+            if (fromY < toY) {
+              // 向下
+              pathStr = `M ${fromX} ${fromY} H ${exitX} V ${toY} H ${toX} m -5 -5 l 5 5 l -5 5`
+            } else {
+              // 向上
+              pathStr = `M ${fromX} ${fromY} H ${exitX} V ${toY} H ${toX} m -5 -5 l 5 5 l -5 5`
+            }
+          }
+
+          const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+          pathEl.setAttribute('d', pathStr)
+          pathEl.setAttribute('class', 'arrow')
+          pathEl.setAttribute('data-from', sourceId)
+          pathEl.setAttribute('data-to', targetId)
+          arrowLayer.appendChild(pathEl)
+
+          // 箭头描边层（更深色、更宽的线，作为背景）
+          const strokeEl = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+          strokeEl.setAttribute('d', pathStr)
+          strokeEl.setAttribute('class', 'arrow-stroke')
+          strokeEl.setAttribute('data-from', sourceId)
+          strokeEl.setAttribute('data-to', targetId)
+          arrowLayer.insertBefore(strokeEl, pathEl)
+
+          // 保存箭头引用
+          gantt.arrows.push({
+            from_task: fromBar,
+            to_task: targetBar,
+            element: pathEl,
+            path: pathStr
+          })
+        }
       }
     }
   }

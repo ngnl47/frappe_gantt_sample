@@ -44,10 +44,22 @@
   display: none !important;
 }
 
-// 依赖箭头样式
+// 依赖箭头描边层（深色背景）
+.gantt .arrow-stroke {
+  stroke: rgba(0, 0, 0, 0.15) !important;
+  stroke-width: 4px !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+// 依赖箭头主线（橙色）
 .gantt .arrow {
   stroke: #E6A23C !important;
-  stroke-width: 3px !important;
+  stroke-width: 2px !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
 }
 
 // 只显示月份分隔线（thick），隐藏普通每日刻度线
